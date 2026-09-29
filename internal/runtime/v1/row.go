@@ -7,25 +7,38 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 )
 
-// RequestRow tracks active independent request IDs for one login.
+// RequestRow tracks active independent request IDs for one login and the
+// compressions negotiated for that connection.
 //
 // Each ID is stored with the isExternal flag passed to [RequestRow.Register].
-// Count reports how many IDs are currently registered. Methods are safe for
-// concurrent use. A RequestRow contains a mutex and must not be copied; share
-// the pointer returned by [NewRequestRow].
+// The compression set is fixed by [NewRequestRow]. Count reports how many IDs
+// are currently registered. Methods are safe for concurrent use. A RequestRow
+// contains a mutex and must not be copied; share the pointer returned by
+// [NewRequestRow].
 type RequestRow struct {
-	login    string
-	requests map[fields.RequestID]bool
+	login        string
+	requests     map[fields.RequestID]bool
+	compressions map[fields.Compression]struct{}
 
 	mx sync.RWMutex
 }
 
-// NewRequestRow returns an empty row for login.
-func NewRequestRow(login string) *RequestRow {
+// NewRequestRow returns an empty request set for login.
+// compressions are the algorithms this connection may use; duplicate codes are
+// kept once. A nil or empty list means no compression is supported.
+func NewRequestRow(login string, compressions []fields.Compression) *RequestRow {
+	c := make(map[fields.Compression]struct{}, len(compressions))
+	for _, compression := range compressions {
+		if _, ok := c[compression]; !ok {
+			c[compression] = struct{}{}
+		}
+	}
+
 	return &RequestRow{
-		login:    login,
-		requests: make(map[fields.RequestID]bool),
-		mx:       sync.RWMutex{},
+		login:        login,
+		requests:     make(map[fields.RequestID]bool),
+		compressions: c,
+		mx:           sync.RWMutex{},
 	}
 }
 
@@ -37,7 +50,7 @@ func (r *RequestRow) Register(requestID fields.RequestID, isExternal bool) error
 	r.mx.Lock()
 	defer r.mx.Unlock()
 
-	if r.isRegistered(requestID) {
+	if _, ok := r.isRegistered(requestID); ok {
 		return errs.NewErrorRequestsConflict(requestID)
 	}
 
@@ -55,8 +68,9 @@ func (r *RequestRow) Terminate(requestID fields.RequestID) {
 	delete(r.requests, requestID)
 }
 
-// IsRegistered reports whether requestID is currently active.
-func (r *RequestRow) IsRegistered(requestID fields.RequestID) bool {
+// IsRegistered reports the isExternal flag stored for requestID and whether
+// that ID is active. The flag is false when the ID is not registered.
+func (r *RequestRow) IsRegistered(requestID fields.RequestID) (bool, bool) {
 	r.mx.RLock()
 	defer r.mx.RUnlock()
 
@@ -73,12 +87,18 @@ func (r *RequestRow) Count() int {
 
 // isRegistered reports whether requestID is in the set.
 // The caller must hold r.mx.
-func (r *RequestRow) isRegistered(requestID fields.RequestID) bool {
-	_, ok := r.requests[requestID]
-	return ok
+func (r *RequestRow) isRegistered(requestID fields.RequestID) (bool, bool) {
+	isExternal, ok := r.requests[requestID]
+	return isExternal, ok
 }
 
 // Login returns the login passed to [NewRequestRow].
 func (r *RequestRow) Login() string {
 	return r.login
+}
+
+// IsSupportCompression reports whether compression was passed to [NewRequestRow].
+func (r *RequestRow) IsSupportCompression(compression fields.Compression) bool {
+	_, ok := r.compressions[compression]
+	return ok
 }
