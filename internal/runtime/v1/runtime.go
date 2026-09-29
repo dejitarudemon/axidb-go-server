@@ -25,7 +25,8 @@ import (
 // and the read, write, delete, and auth handlers. Command handling is not
 // implemented yet. [Runtime.Handle] answers protocol errors when the frame was
 // fully read. It returns [runtime.ErrCloseConnection] when the caller must drop
-// the connection.
+// the connection, and [runtime.ErrLogAndIgnore] when the caller must log the
+// failure, write nothing, and keep the connection.
 type Runtime struct {
 	decoder decoder.Decoder
 
@@ -102,6 +103,9 @@ func (r Runtime) Handshake(ctx context.Context, reader *bufio.Reader, source []b
 // A nil error means the caller writes the bytes and keeps the connection.
 // An error for which errors.Is(err, [runtime.ErrCloseConnection]) is true means
 // the caller closes the connection and does not keep reading frames.
+// An error for which errors.Is(err, [runtime.ErrLogAndIgnore]) is true means
+// the frame was consumed: the caller logs the error, writes nothing, and
+// keeps the connection.
 func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, row *RequestRow) ([]byte, error) {
 	if row == nil {
 		return nil, runtime.CloseConnection(runtime.ErrNilRequestRow)
@@ -127,11 +131,11 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, row *RequestR
 	case fields.Answer:
 		isExternal, ok := row.IsRegistered(request.RequestID)
 		if !ok {
-			// return any spessific error. just to log
+			return nil, runtime.LogAndIgnore(NewErrorUnregisteredAnswer(request.RequestID))
 		}
 
 		if !isExternal {
-			// return any spessific error. just to log
+			return nil, runtime.LogAndIgnore(NewErrorNonExternalAnswer(request.RequestID))
 		}
 
 		defer row.Terminate(request.RequestID)
@@ -182,9 +186,13 @@ func (r Runtime) toProtocolError(e error) err.ProtocolError {
 
 // don't answer to answer
 func (r Runtime) handleAnswer(b body.Body) error {
-	a, _ := b.(body.Answer)
+	a, ok := b.(body.Answer)
+	if !ok {
+		return runtime.LogAndIgnore(NewErrorUnexpectedAnswer(b.Command()))
+	}
+
 	if a.IsResponseTo() != fields.Ping {
-		return nil // return some speciffic internal error, just to log
+		return runtime.LogAndIgnore(NewErrorUnexpectedAnswer(a.IsResponseTo()))
 	}
 
 	return nil
