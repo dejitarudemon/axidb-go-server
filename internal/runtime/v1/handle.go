@@ -20,7 +20,7 @@ import (
 // A nil error means the caller writes the bytes and keeps the connection.
 // An error for which errors.Is(err, [errs.ErrCloseConnection]) is true means
 // the caller closes the connection and does not keep reading frames.
-// An error for which errors.Is(err, [runtime.ErrLogAndIgnore]) is true means
+// An error for which errors.Is(err, [errs.ErrLogAndIgnore]) is true means
 // the frame was consumed: the caller logs the error, writes nothing, and
 // keeps the connection.
 func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) ([]byte, error) {
@@ -48,11 +48,11 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *r
 	case fields.Answer:
 		isExternal, ok := requestRow.IsRegistered(request.RequestID)
 		if !ok {
-			return nil, runtime.LogAndIgnore(answer.NewErrorUnregisteredAnswer(request.RequestID))
+			return nil, errs.LogAndIgnore(answer.NewErrorUnregisteredAnswer(request.RequestID))
 		}
 
 		if !isExternal {
-			return nil, runtime.LogAndIgnore(answer.NewErrorNonExternalAnswer(request.RequestID))
+			return nil, errs.LogAndIgnore(answer.NewErrorNonExternalAnswer(request.RequestID))
 		}
 
 		defer requestRow.Terminate(request.RequestID)
@@ -95,16 +95,16 @@ func decodeClosesConnection(e error) bool {
 
 // handleAnswer accepts a ping answer and ignores every other answer.
 //
-// A ping answer returns nil. Any other answer returns [runtime.ErrLogAndIgnore]:
+// A ping answer returns nil. Any other answer returns [errs.ErrLogAndIgnore]:
 // the caller logs the error, writes nothing, and keeps the connection.
 func (r Runtime) handleAnswer(b body.Body) error {
 	a, ok := b.(body.Answer)
 	if !ok {
-		return runtime.LogAndIgnore(answer.NewErrorUnexpectedAnswer(b.Command()))
+		return errs.LogAndIgnore(answer.NewErrorUnexpectedAnswer(b.Command()))
 	}
 
 	if a.IsResponseTo() != fields.Ping {
-		return runtime.LogAndIgnore(answer.NewErrorUnexpectedAnswer(a.IsResponseTo()))
+		return errs.LogAndIgnore(answer.NewErrorUnexpectedAnswer(a.IsResponseTo()))
 	}
 
 	return nil
