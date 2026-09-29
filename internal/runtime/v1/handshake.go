@@ -9,18 +9,19 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime"
+	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
 )
 
 // Handshake reads the first frame from reader and authenticates the client.
 //
-// On success it returns the request row for the login, the protocol versions
+// On success it returns the [row.RequestRow] for the login, the protocol versions
 // this runtime accepts, and the encoded handshake answer. source is reported
 // to the client when authentication is rejected.
 // A nil error means the caller writes the bytes and keeps the connection.
 // The request row is nil when those bytes are an error answer.
 // An error for which errors.Is(err, [runtime.ErrCloseConnection]) is true means
 // the caller closes the connection and does not keep reading frames.
-func (r Runtime) Handshake(ctx context.Context, reader *bufio.Reader, source []byte) (*RequestRow, []fields.Version, []byte, error) {
+func (r Runtime) Handshake(ctx context.Context, reader *bufio.Reader, source []byte) (*row.RequestRow, []fields.Version, []byte, error) {
 	request, err := r.decoder.DecodeFrame(reader)
 	if err != nil {
 		if decodeClosesConnection(err) {
@@ -70,5 +71,5 @@ func (r Runtime) Handshake(ctx context.Context, reader *bufio.Reader, source []b
 		return nil, nil, answer, err
 	}
 
-	return NewRequestRow(hb.Login, hb.Compressions), r.allowedVersions, encoded, nil
+	return row.NewRequestRow(hb.Login, hb.Compressions), r.allowedVersions, encoded, nil
 }

@@ -10,6 +10,8 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime"
+	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/answer"
+	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
 )
 
 // Handle reads one frame from reader and returns the encoded answer.
@@ -20,8 +22,8 @@ import (
 // An error for which errors.Is(err, [runtime.ErrLogAndIgnore]) is true means
 // the frame was consumed: the caller logs the error, writes nothing, and
 // keeps the connection.
-func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, row *RequestRow) ([]byte, error) {
-	if row == nil {
+func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) ([]byte, error) {
+	if requestRow == nil {
 		return nil, runtime.CloseConnection(runtime.ErrNilRequestRow)
 	}
 
@@ -43,24 +45,24 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, row *RequestR
 		return r.writeErrAnswer(request.RequestID, errs.NewErrorUnexpectedCommand(request.Body.Command(), fields.Read))
 
 	case fields.Answer:
-		isExternal, ok := row.IsRegistered(request.RequestID)
+		isExternal, ok := requestRow.IsRegistered(request.RequestID)
 		if !ok {
-			return nil, runtime.LogAndIgnore(NewErrorUnregisteredAnswer(request.RequestID))
+			return nil, runtime.LogAndIgnore(answer.NewErrorUnregisteredAnswer(request.RequestID))
 		}
 
 		if !isExternal {
-			return nil, runtime.LogAndIgnore(NewErrorNonExternalAnswer(request.RequestID))
+			return nil, runtime.LogAndIgnore(answer.NewErrorNonExternalAnswer(request.RequestID))
 		}
 
-		defer row.Terminate(request.RequestID)
+		defer requestRow.Terminate(request.RequestID)
 		return nil, r.handleAnswer(request.Body)
 
 	case fields.Read, fields.Write, fields.Delete, fields.Batch:
-		if err := row.Register(request.RequestID, true); err != nil {
+		if err := requestRow.Register(request.RequestID, true); err != nil {
 			return r.writeErrAnswer(request.RequestID, err)
 		}
-		defer row.Terminate(request.RequestID)
-		return r.handleRequest(NewContext(ctx, row.Login(), request.RequestID, true), request.Body)
+		defer requestRow.Terminate(request.RequestID)
+		return r.handleRequest(NewContext(ctx, requestRow.Login(), request.RequestID, true), request.Body)
 	}
 
 	return r.writeErrAnswer(request.RequestID, errs.NewErrorUnsupportedCommand(request.Body.Command()))
@@ -97,11 +99,11 @@ func decodeClosesConnection(e error) bool {
 func (r Runtime) handleAnswer(b body.Body) error {
 	a, ok := b.(body.Answer)
 	if !ok {
-		return runtime.LogAndIgnore(NewErrorUnexpectedAnswer(b.Command()))
+		return runtime.LogAndIgnore(answer.NewErrorUnexpectedAnswer(b.Command()))
 	}
 
 	if a.IsResponseTo() != fields.Ping {
-		return runtime.LogAndIgnore(NewErrorUnexpectedAnswer(a.IsResponseTo()))
+		return runtime.LogAndIgnore(answer.NewErrorUnexpectedAnswer(a.IsResponseTo()))
 	}
 
 	return nil
