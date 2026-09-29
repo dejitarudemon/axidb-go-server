@@ -9,7 +9,6 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/err"
 	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/answer"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
@@ -25,7 +24,7 @@ import (
 // keeps the connection.
 func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) ([]byte, error) {
 	if requestRow == nil {
-		return nil, errs.CloseConnection(runtime.ErrNilRequestRow)
+		return nil, errs.CloseConnection(errs.ErrNilRequestRow)
 	}
 
 	request, err := r.decoder.DecodeFrame(reader)
