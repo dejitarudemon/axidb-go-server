@@ -20,7 +20,8 @@ import (
 // A nil error means the caller writes the bytes and keeps the connection.
 // The request row is nil when those bytes are an error answer.
 // An error for which errors.Is(err, [errs.ErrCloseConnection]) is true means
-// the caller closes the connection and does not keep reading frames.
+// the connection with this client must be closed. The caller does not keep
+// reading frames.
 func (r Runtime) Handshake(ctx context.Context, reader *bufio.Reader, source []byte) (*row.RequestRow, []fields.Version, []byte, error) {
 	request, err := r.decoder.DecodeFrame(reader)
 	if err != nil {

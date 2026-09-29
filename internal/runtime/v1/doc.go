@@ -8,7 +8,7 @@
 // Read, write, delete, and ping are handled. Batch is not implemented yet.
 //
 // A nil error means the caller writes the bytes and keeps the connection.
-// [errs.ErrCloseConnection] means the caller closes the connection.
+// [errs.ErrCloseConnection] means the connection with this client must be closed.
 // [errs.ErrLogAndIgnore] means the caller logs the error, writes nothing,
 // and keeps the connection. An answer that must only be logged is one of
 // [answer.ErrorUnregisteredAnswer], [answer.ErrorNonExternalAnswer], or

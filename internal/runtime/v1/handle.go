@@ -18,7 +18,8 @@ import (
 //
 // A nil error means the caller writes the bytes and keeps the connection.
 // An error for which errors.Is(err, [errs.ErrCloseConnection]) is true means
-// the caller closes the connection and does not keep reading frames.
+// the connection with this client must be closed. The caller does not keep
+// reading frames.
 // An error for which errors.Is(err, [errs.ErrLogAndIgnore]) is true means
 // the frame was consumed: the caller logs the error, writes nothing, and
 // keeps the connection.

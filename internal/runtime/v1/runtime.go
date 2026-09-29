@@ -13,7 +13,7 @@ import (
 // and the read, write, delete, and auth handlers. Read, write, delete, and ping
 // are handled. Batch is not implemented yet. [Runtime.Handle] answers protocol
 // errors when the frame was fully read. It returns [errs.ErrCloseConnection]
-// when the caller must drop the connection, and [errs.ErrLogAndIgnore] when
+// when the connection with this client must be closed, and [errs.ErrLogAndIgnore] when
 // the caller must log the failure, write nothing, and keep the connection.
 type Runtime struct {
 	decoder decoder.Decoder
