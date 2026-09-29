@@ -5,9 +5,10 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/decoder"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
+	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
 )
 
-// RuntimeBuilder assembles a [Runtime] from a [RuntimeBuilderConfig] and handlers.
+// RuntimeBuilder assembles a [Runtime] from a [config.RuntimeBuilderConfig] and handlers.
 //
 // The builder is finished after [RuntimeBuilder.Build]. Create a new builder to
 // assemble another runtime.
@@ -20,12 +21,12 @@ type RuntimeBuilder struct {
 // Read, write, delete, and auth handlers start as the package stubs. Replace
 // them with WithHandler* before Build. The runtime frame-size limit is the
 // config body limit, in bytes.
-func NewRuntimerBuilder(config RuntimeBuilderConfig) *RuntimeBuilder {
+func NewRuntimerBuilder(cfg config.RuntimeBuilderConfig) *RuntimeBuilder {
 	return &RuntimeBuilder{
 		runtime: Runtime{
-			decoder:             decoder.NewDecoder(config.limits.body, config.compressors),
-			allowedVersions:     config.versions,
-			allowedCompressions: compressorsToRuntimeMap(config.compressors),
+			decoder:             decoder.NewDecoder(cfg.BodyLimit(), cfg.Compressors()),
+			allowedVersions:     cfg.Versions(),
+			allowedCompressions: compressorsToRuntimeMap(cfg.Compressors()),
 
 			handlerRead:   defaultHandlerRead,
 			handlerWrite:  defaultHandlerWrite,
@@ -33,7 +34,7 @@ func NewRuntimerBuilder(config RuntimeBuilderConfig) *RuntimeBuilder {
 
 			handlerAuth: defaultHandlerAuth,
 
-			limit: int(config.limits.body),
+			limit: int(cfg.BodyLimit()),
 		},
 	}
 }

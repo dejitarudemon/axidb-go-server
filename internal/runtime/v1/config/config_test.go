@@ -1,4 +1,4 @@
-package runtime_v1
+package config
 
 import (
 	"slices"

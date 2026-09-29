@@ -1,4 +1,4 @@
-package runtime_v1
+package config
 
 import (
 	"slices"
@@ -25,7 +25,7 @@ type limits struct {
 	batch fields.BatchLimit
 }
 
-// RuntimeBuilderConfig holds construction options for [NewRuntimerBuilder].
+// RuntimeBuilderConfig holds construction options for the v1 runtime builder.
 //
 // Use NewRuntimeBuilderConfig for defaults, then chain With* methods.
 type RuntimeBuilderConfig struct {
@@ -82,6 +82,26 @@ func (rbc *RuntimeBuilderConfig) WithAllowedVersions(versions ...fields.Version)
 		}
 	}
 	return rbc
+}
+
+// BodyLimit returns the maximum request body size in bytes.
+func (rbc *RuntimeBuilderConfig) BodyLimit() fields.BodyLimit {
+	return rbc.limits.body
+}
+
+// BatchLimit returns the maximum number of operations allowed in one batch.
+func (rbc *RuntimeBuilderConfig) BatchLimit() fields.BatchLimit {
+	return rbc.limits.batch
+}
+
+// Versions returns the protocol versions this config allows.
+func (rbc *RuntimeBuilderConfig) Versions() []fields.Version {
+	return rbc.versions
+}
+
+// Compressors returns the compressors this config allows.
+func (rbc *RuntimeBuilderConfig) Compressors() []compressor.Compressor {
+	return rbc.compressors
 }
 
 func (rbc *RuntimeBuilderConfig) hasCompressor(code fields.Compression) bool {

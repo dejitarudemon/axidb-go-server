@@ -14,10 +14,26 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
+	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
 )
 
+type stubCompressor struct {
+	code fields.Compression
+	id   int
+}
+
+func (s stubCompressor) Code() fields.Compression { return s.code }
+
+func (s stubCompressor) Compress(buf []byte) ([]byte, error) {
+	return append([]byte(nil), buf...), nil
+}
+
+func (s stubCompressor) Decompress(buf []byte) ([]byte, error) {
+	return append([]byte(nil), buf...), nil
+}
+
 func TestNewRuntimerBuilderDefaults(t *testing.T) {
-	rt := NewRuntimerBuilder(*NewRuntimeBuilderConfig()).Build()
+	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig()).Build()
 
 	if !slices.Equal(rt.allowedVersions, []fields.Version{1}) {
 		t.Errorf("versions = %v, want [1]", rt.allowedVersions)
@@ -27,8 +43,8 @@ func TestNewRuntimerBuilderDefaults(t *testing.T) {
 		t.Errorf("compressions = %v, want empty", rt.allowedCompressions)
 	}
 
-	if rt.limit != int(defaultBodyLimit) {
-		t.Errorf("limit = %d, want %d", rt.limit, defaultBodyLimit)
+	if rt.limit != int(config.NewRuntimeBuilderConfig().BodyLimit()) {
+		t.Errorf("limit = %d, want %d", rt.limit, config.NewRuntimeBuilderConfig().BodyLimit())
 	}
 
 	assertDefaultHandlers(t, rt)
@@ -36,7 +52,7 @@ func TestNewRuntimerBuilderDefaults(t *testing.T) {
 }
 
 func TestNewRuntimerBuilderZeroConfig(t *testing.T) {
-	rt := NewRuntimerBuilder(RuntimeBuilderConfig{}).Build()
+	rt := NewRuntimerBuilder(config.RuntimeBuilderConfig{}).Build()
 
 	if len(rt.allowedVersions) != 0 {
 		t.Errorf("versions = %v, want empty", rt.allowedVersions)
@@ -67,14 +83,14 @@ func TestRuntimeBuilderHandlers(t *testing.T) {
 	del := func(Context, fields.Key) error { return sentinel }
 	auth := func(Context, string, [32]byte) (bool, error) { return false, nil }
 
-	rb := NewRuntimerBuilder(*NewRuntimeBuilderConfig())
+	rb := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig())
 	if rb.WithHandlerRead(nil).WithHandlerWrite(nil).WithHandlerDelete(nil).WithHandlerAuth(nil) != rb {
 		t.Fatal("WithHandler returned a different builder")
 	}
 
 	assertDefaultHandlers(t, rb.Build())
 
-	rb = NewRuntimerBuilder(*NewRuntimeBuilderConfig())
+	rb = NewRuntimerBuilder(*config.NewRuntimeBuilderConfig())
 	rb.WithHandlerRead(read).WithHandlerWrite(write).WithHandlerDelete(del).WithHandlerAuth(auth)
 	rt := rb.Build()
 
@@ -104,7 +120,7 @@ func TestRuntimeBuilderNilHandlerKeepsCustom(t *testing.T) {
 	sentinel := errors.New("sentinel")
 	read := func(Context, fields.Key) (value.V, error) { return nil, sentinel }
 
-	rb := NewRuntimerBuilder(*NewRuntimeBuilderConfig()).WithHandlerRead(read).WithHandlerRead(nil)
+	rb := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig()).WithHandlerRead(read).WithHandlerRead(nil)
 	rt := rb.Build()
 
 	if _, err := rt.handlerRead(Context{}, nil); !errors.Is(err, sentinel) {
@@ -113,7 +129,7 @@ func TestRuntimeBuilderNilHandlerKeepsCustom(t *testing.T) {
 }
 
 func TestRuntimeBuilderBuiltHandlersStay(t *testing.T) {
-	rb := NewRuntimerBuilder(*NewRuntimeBuilderConfig())
+	rb := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig())
 	rt := rb.Build()
 
 	rb.WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
@@ -135,7 +151,7 @@ func TestRuntimeBuilderVersionsAndCompressors(t *testing.T) {
 	again := stubCompressor{code: fields.Zstd, id: 2}
 	s2 := stubCompressor{code: fields.S2, id: 3}
 
-	cfg := NewRuntimeBuilderConfig().
+	cfg := config.NewRuntimeBuilderConfig().
 		WithAllowedVersions(fields.Version(2), fields.Version(2)).
 		WithCompressors(zstd, again, nil, s2)
 
@@ -181,7 +197,7 @@ func TestRuntimeBuilderBodyLimit(t *testing.T) {
 				body = frame.Frame{RequestID: 1, Body: bodies.Read(tt.key)}
 			}
 
-			cfg := NewRuntimeBuilderConfig().WithBodyLimit(tt.limit)
+			cfg := config.NewRuntimeBuilderConfig().WithBodyLimit(tt.limit)
 			rt := NewRuntimerBuilder(*cfg).Build()
 			if rt.limit != int(tt.limit) {
 				t.Fatalf("limit = %d, want %d", rt.limit, tt.limit)
@@ -199,7 +215,7 @@ func TestRuntimeBuilderBodyLimit(t *testing.T) {
 
 func TestRuntimeBuilderDecoderUsesCompressor(t *testing.T) {
 	zstd := stubCompressor{code: fields.Zstd, id: 1}
-	cfg := NewRuntimeBuilderConfig().WithCompressors(zstd)
+	cfg := config.NewRuntimeBuilderConfig().WithCompressors(zstd)
 	rt := NewRuntimerBuilder(*cfg).Build()
 
 	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, zstd)
@@ -214,7 +230,7 @@ func TestRuntimeBuilderDecoderUsesCompressor(t *testing.T) {
 }
 
 func TestRuntimeBuilderDecoderRejectsUnknownCompression(t *testing.T) {
-	rt := NewRuntimerBuilder(*NewRuntimeBuilderConfig()).Build()
+	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig()).Build()
 	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, stubCompressor{code: fields.S2})
 
 	_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
