@@ -138,7 +138,11 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, row *RequestR
 		return nil, r.handleAnswer(request.Body)
 
 	case fields.Read, fields.Write, fields.Delete, fields.Batch:
-		// handle these requests
+		if err := row.Register(request.RequestID, true); err != nil {
+			return r.writeErrAnswer(request.RequestID, err)
+		}
+		defer row.Terminate(request.RequestID)
+		return r.handleRequest(NewContext(ctx, row.Login(), request.RequestID, true), request.Body)
 	}
 
 	return r.writeErrAnswer(request.RequestID, errs.NewErrorUnsupportedCommand(request.Body.Command()))
@@ -244,4 +248,37 @@ func (r Runtime) handleDelete(ctx Context, body body.Body) (frame.Frame, error) 
 	}
 
 	return builder.NewFrameBuilder(r.limit).NewDeleteAnswer(ctx.RequestID())
+}
+
+func (r Runtime) handleRequest(ctx Context, body body.Body) ([]byte, error) {
+	result := frame.Frame{}
+	handlerErr := error(nil)
+
+	switch body.Command() {
+	case fields.Read:
+		result, handlerErr = r.handleRead(ctx, body)
+	case fields.Write:
+		result, handlerErr = r.handleWrite(ctx, body)
+	case fields.Delete:
+		result, handlerErr = r.handleDelete(ctx, body)
+	case fields.Ping:
+		result, handlerErr = r.handlePing(ctx)
+	case fields.Batch:
+		// handle Batch
+	default:
+		return r.writeErrAnswer(ctx.RequestID(), errs.NewErrorUnsupportedCommand(body.Command()))
+	}
+
+	if handlerErr != nil {
+		return r.writeErrAnswer(ctx.RequestID(), handlerErr)
+	}
+
+	buf := buffer.Slice{}
+	buf.Preallocate(result.Size())
+
+	if err := result.Encode(&buf, nil); err != nil {
+		return r.writeErrAnswer(ctx.RequestID(), err)
+	}
+
+	return buf.Bytes(), nil
 }
