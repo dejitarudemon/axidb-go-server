@@ -18,7 +18,8 @@ type RuntimeBuilder struct {
 // NewRuntimerBuilder returns a builder filled from config.
 //
 // Read, write, delete, and auth handlers start as the package stubs. Replace
-// them with WithHandler* before Build.
+// them with WithHandler* before Build. The runtime frame-size limit is the
+// config body limit, in bytes.
 func NewRuntimerBuilder(config RuntimeBuilderConfig) *RuntimeBuilder {
 	return &RuntimeBuilder{
 		runtime: Runtime{
@@ -31,6 +32,8 @@ func NewRuntimerBuilder(config RuntimeBuilderConfig) *RuntimeBuilder {
 			handlerDelete: defaultHandlerDelete,
 
 			handlerAuth: defaultHandlerAuth,
+
+			limit: int(config.limits.body),
 		},
 	}
 }

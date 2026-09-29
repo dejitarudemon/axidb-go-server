@@ -9,12 +9,13 @@ import (
 
 // RequestRow tracks active independent request IDs for one login.
 //
+// Each ID is stored with the isExternal flag passed to [RequestRow.Register].
 // Count reports how many IDs are currently registered. Methods are safe for
 // concurrent use. A RequestRow contains a mutex and must not be copied; share
 // the pointer returned by [NewRequestRow].
 type RequestRow struct {
 	login    string
-	requests map[fields.RequestID]struct{}
+	requests map[fields.RequestID]bool
 
 	mx sync.RWMutex
 }
@@ -23,16 +24,16 @@ type RequestRow struct {
 func NewRequestRow(login string) *RequestRow {
 	return &RequestRow{
 		login:    login,
-		requests: make(map[fields.RequestID]struct{}),
+		requests: make(map[fields.RequestID]bool),
 		mx:       sync.RWMutex{},
 	}
 }
 
-// Register marks requestID as active.
+// Register marks requestID as active and stores isExternal with it.
 //
 // If requestID is already registered, Register returns [errs.ErrorRequestsConflict]
-// and leaves the row unchanged.
-func (r *RequestRow) Register(requestID fields.RequestID) error {
+// and leaves the stored flag unchanged.
+func (r *RequestRow) Register(requestID fields.RequestID, isExternal bool) error {
 	r.mx.Lock()
 	defer r.mx.Unlock()
 
@@ -40,7 +41,8 @@ func (r *RequestRow) Register(requestID fields.RequestID) error {
 		return errs.NewErrorRequestsConflict(requestID)
 	}
 
-	r.requests[requestID] = struct{}{}
+	r.requests[requestID] = isExternal
+
 	return nil
 }
 
