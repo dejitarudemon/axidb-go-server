@@ -1,6 +1,8 @@
 package runtime_v1
 
 import (
+	"sync"
+
 	"github.com/dejitarudemon/axidb-go-protocol/v1/buffer"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/builder"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/err"
@@ -40,12 +42,27 @@ func (r Runtime) writeErrAnswer(requestID fields.RequestID, cause error) ([]byte
 	return encoded, nil
 }
 
-// encodeFrame writes f into a buffer and returns a copy of the encoded bytes.
+// frameBufferPool reuses encode buffers. [buffer.Slice.Bytes] copies the
+// encoded bytes, so the buffer can return to the pool after encodeFrame.
+var frameBufferPool = sync.Pool{
+	New: func() any {
+		return &buffer.Slice{}
+	},
+}
+
+// encodeFrame writes f into a pooled buffer and returns a copy of the encoded bytes.
+// The buffer is cleaned and returned to the pool before encodeFrame returns.
 func encodeFrame(f frame.Frame) ([]byte, error) {
-	buf := buffer.Slice{}
+	buf := frameBufferPool.Get().(*buffer.Slice)
+	defer func() {
+		buf.Clean()
+		frameBufferPool.Put(buf)
+	}()
+
+	buf.Clean()
 	buf.Preallocate(f.Size())
 
-	if err := f.Encode(&buf, nil); err != nil {
+	if err := f.Encode(buf, nil); err != nil {
 		return nil, err
 	}
 
