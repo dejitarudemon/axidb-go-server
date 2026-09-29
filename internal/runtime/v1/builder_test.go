@@ -27,6 +27,10 @@ func TestNewRuntimerBuilderDefaults(t *testing.T) {
 		t.Errorf("compressions = %v, want empty", rt.allowedCompressions)
 	}
 
+	if rt.limit != int(defaultBodyLimit) {
+		t.Errorf("limit = %d, want %d", rt.limit, defaultBodyLimit)
+	}
+
 	assertDefaultHandlers(t, rt)
 	assertDecodesPing(t, rt)
 }
@@ -40,6 +44,10 @@ func TestNewRuntimerBuilderZeroConfig(t *testing.T) {
 
 	if len(rt.allowedCompressions) != 0 {
 		t.Errorf("compressions = %v, want empty", rt.allowedCompressions)
+	}
+
+	if rt.limit != 0 {
+		t.Errorf("limit = %d, want 0", rt.limit)
 	}
 
 	assertDefaultHandlers(t, rt)
@@ -175,6 +183,10 @@ func TestRuntimeBuilderBodyLimit(t *testing.T) {
 
 			cfg := NewRuntimeBuilderConfig().WithBodyLimit(tt.limit)
 			rt := NewRuntimerBuilder(*cfg).Build()
+			if rt.limit != int(tt.limit) {
+				t.Fatalf("limit = %d, want %d", rt.limit, tt.limit)
+			}
+
 			_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(encodeFrame(t, body, nil))))
 
 			_, got := errors.AsType[errs.ErrorBodyLimitIsExceeded](err)

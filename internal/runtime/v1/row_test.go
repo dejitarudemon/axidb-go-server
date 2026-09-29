@@ -46,7 +46,7 @@ func TestRequestRowRegisterAndTerminate(t *testing.T) {
 	ids := []fields.RequestID{0, 1, fields.RequestID(^uint32(0))}
 
 	for _, id := range ids {
-		if err := row.Register(id); err != nil {
+		if err := row.Register(id, false); err != nil {
 			t.Fatalf("Register(%d) = %v", id, err)
 		}
 	}
@@ -70,8 +70,12 @@ func TestRequestRowRegisterAndTerminate(t *testing.T) {
 		t.Fatalf("Count() = %d, want %d", row.Count(), len(ids)-1)
 	}
 
-	if err := row.Register(1); err != nil {
+	if err := row.Register(1, true); err != nil {
 		t.Fatalf("Register(1) after Terminate = %v", err)
+	}
+
+	if !row.requests[1] {
+		t.Fatal("isExternal = false, want true")
 	}
 }
 
@@ -79,11 +83,11 @@ func TestRequestRowDuplicateRegister(t *testing.T) {
 	row := NewRequestRow("user")
 	id := fields.RequestID(7)
 
-	if err := row.Register(id); err != nil {
+	if err := row.Register(id, false); err != nil {
 		t.Fatalf("Register = %v", err)
 	}
 
-	err := row.Register(id)
+	err := row.Register(id, true)
 	assertRequestsConflict(t, err, id)
 
 	if !row.IsRegistered(id) {
@@ -93,13 +97,17 @@ func TestRequestRowDuplicateRegister(t *testing.T) {
 	if row.Count() != 1 {
 		t.Fatalf("Count() = %d, want 1", row.Count())
 	}
+
+	if row.requests[id] {
+		t.Fatal("isExternal = true, want false")
+	}
 }
 
 func TestRequestRowTerminateUnknown(t *testing.T) {
 	row := NewRequestRow("user")
 
 	row.Terminate(1)
-	if err := row.Register(1); err != nil {
+	if err := row.Register(1, false); err != nil {
 		t.Fatalf("Register = %v", err)
 	}
 
@@ -128,7 +136,7 @@ func TestRequestRowConcurrentRegister(t *testing.T) {
 		go func(id fields.RequestID) {
 			defer wg.Done()
 
-			if err := row.Register(id); err != nil {
+			if err := row.Register(id, false); err != nil {
 				t.Errorf("Register(%d) = %v", id, err)
 			}
 		}(fields.RequestID(i))
@@ -154,7 +162,7 @@ func TestRequestRowConcurrentDuplicate(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			err := row.Register(1)
+			err := row.Register(1, true)
 			if err == nil {
 				success.Add(1)
 				return
@@ -191,7 +199,7 @@ func TestRequestRowNilPanics(t *testing.T) {
 		name string
 		call func()
 	}{
-		{"register", func() { _ = row.Register(1) }},
+		{"register", func() { _ = row.Register(1, false) }},
 		{"terminate", func() { row.Terminate(1) }},
 		{"is registered", func() { _ = row.IsRegistered(1) }},
 		{"count", func() { _ = row.Count() }},
