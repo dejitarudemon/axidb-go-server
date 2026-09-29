@@ -10,7 +10,7 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/buffer"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/compressor"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
+	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
@@ -71,7 +71,7 @@ func TestNewRuntimerBuilderZeroConfig(t *testing.T) {
 	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Read("x")}, nil)
 	_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
 
-	if _, ok := errors.AsType[errs.ErrorBodyLimitIsExceeded](err); !ok {
+	if _, ok := errors.AsType[protocolerrs.ErrorBodyLimitIsExceeded](err); !ok {
 		t.Fatalf("error = %v, want ErrorBodyLimitIsExceeded", err)
 	}
 }
@@ -205,7 +205,7 @@ func TestRuntimeBuilderBodyLimit(t *testing.T) {
 
 			_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(mustEncodeFrame(t, body, nil))))
 
-			_, got := errors.AsType[errs.ErrorBodyLimitIsExceeded](err)
+			_, got := errors.AsType[protocolerrs.ErrorBodyLimitIsExceeded](err)
 			if got != tt.wantErr {
 				t.Fatalf("body limit exceeded = %v, error = %v, want exceeded %v", got, err, tt.wantErr)
 			}
@@ -235,7 +235,7 @@ func TestRuntimeBuilderDecoderRejectsUnknownCompression(t *testing.T) {
 
 	_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
 
-	if _, ok := errors.AsType[errs.ErrorUnsupportedCompression](err); !ok {
+	if _, ok := errors.AsType[protocolerrs.ErrorUnsupportedCompression](err); !ok {
 		t.Fatalf("error = %v, want ErrorUnsupportedCompression", err)
 	}
 }

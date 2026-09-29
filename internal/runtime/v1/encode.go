@@ -6,10 +6,10 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/buffer"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/builder"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/err"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
+	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime"
+	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
 )
 
 // toProtocolError returns e when it is already a protocol error.
@@ -19,7 +19,7 @@ func (r Runtime) toProtocolError(e error) err.ProtocolError {
 		return pe
 	}
 
-	return errs.NewErrorInternalError(e)
+	return protocolerrs.NewErrorInternalError(e)
 }
 
 // writeErrAnswer encodes an error answer for requestID.
@@ -31,12 +31,12 @@ func (r Runtime) writeErrAnswer(requestID fields.RequestID, cause error) ([]byte
 
 	result, err := builder.NewFrameBuilder(r.limit).NewErrAnswer(requestID, pe)
 	if err != nil {
-		return nil, runtime.CloseConnection(err)
+		return nil, errs.CloseConnection(err)
 	}
 
 	encoded, err := encodeFrame(result)
 	if err != nil {
-		return nil, runtime.CloseConnection(err)
+		return nil, errs.CloseConnection(err)
 	}
 
 	return encoded, nil

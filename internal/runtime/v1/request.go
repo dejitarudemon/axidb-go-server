@@ -4,7 +4,7 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/builder"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
+	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
 )
@@ -30,7 +30,7 @@ func (r Runtime) handleRequest(ctx Context, body body.Body) ([]byte, error) {
 	case fields.Batch:
 		// handle Batch
 	default:
-		return r.writeErrAnswer(ctx.RequestID(), errs.NewErrorUnsupportedCommand(body.Command()))
+		return r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorUnsupportedCommand(body.Command()))
 	}
 
 	if handlerErr != nil {
@@ -47,7 +47,7 @@ func (r Runtime) handleRequest(ctx Context, body body.Body) ([]byte, error) {
 
 // handleRead calls the read handler for the key in body.
 //
-// A nil value from the handler becomes [errs.ErrorNotFound]. A handler error
+// A nil value from the handler becomes [protocolerrs.ErrorNotFound]. A handler error
 // is returned unchanged. On success it returns a read answer frame.
 func (r Runtime) handleRead(ctx Context, body body.Body) (frame.Frame, error) {
 	rb, _ := body.(bodies.Read)
@@ -57,7 +57,7 @@ func (r Runtime) handleRead(ctx Context, body body.Body) (frame.Frame, error) {
 		return frame.Frame{}, err
 	}
 	if value == nil {
-		return frame.Frame{}, errs.NewErrorNotFound(fields.Key(rb))
+		return frame.Frame{}, protocolerrs.NewErrorNotFound(fields.Key(rb))
 	}
 
 	return builder.NewFrameBuilder(r.limit).NewReadAnswer(ctx.RequestID(), value)

@@ -7,9 +7,10 @@ import (
 
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/err"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
+	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime"
+	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/answer"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
 )
@@ -17,20 +18,20 @@ import (
 // Handle reads one frame from reader and returns the encoded answer.
 //
 // A nil error means the caller writes the bytes and keeps the connection.
-// An error for which errors.Is(err, [runtime.ErrCloseConnection]) is true means
+// An error for which errors.Is(err, [errs.ErrCloseConnection]) is true means
 // the caller closes the connection and does not keep reading frames.
 // An error for which errors.Is(err, [runtime.ErrLogAndIgnore]) is true means
 // the frame was consumed: the caller logs the error, writes nothing, and
 // keeps the connection.
 func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) ([]byte, error) {
 	if requestRow == nil {
-		return nil, runtime.CloseConnection(runtime.ErrNilRequestRow)
+		return nil, errs.CloseConnection(runtime.ErrNilRequestRow)
 	}
 
 	request, err := r.decoder.DecodeFrame(reader)
 	if err != nil {
 		if decodeClosesConnection(err) {
-			return nil, runtime.CloseConnection(err)
+			return nil, errs.CloseConnection(err)
 		}
 
 		return r.writeErrAnswer(request.RequestID, err)
@@ -42,7 +43,7 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *r
 
 	switch request.Body.Command() {
 	case fields.Handshake:
-		return r.writeErrAnswer(request.RequestID, errs.NewErrorUnexpectedCommand(request.Body.Command(), fields.Read))
+		return r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnexpectedCommand(request.Body.Command(), fields.Read))
 
 	case fields.Answer:
 		isExternal, ok := requestRow.IsRegistered(request.RequestID)
@@ -65,7 +66,7 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *r
 		return r.handleRequest(NewContext(ctx, requestRow.Login(), request.RequestID, true), request.Body)
 	}
 
-	return r.writeErrAnswer(request.RequestID, errs.NewErrorUnsupportedCommand(request.Body.Command()))
+	return r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnsupportedCommand(request.Body.Command()))
 }
 
 // decodeClosesConnection reports a failure that leaves the stream unusable.
@@ -81,11 +82,11 @@ func decodeClosesConnection(e error) bool {
 		return true
 	}
 
-	if _, ok := errors.AsType[errs.ErrorBodyLimitIsExceeded](e); ok {
+	if _, ok := errors.AsType[protocolerrs.ErrorBodyLimitIsExceeded](e); ok {
 		return true
 	}
 
-	if _, ok := errors.AsType[errs.ErrorUnsupportedCompression](e); ok {
+	if _, ok := errors.AsType[protocolerrs.ErrorUnsupportedCompression](e); ok {
 		return true
 	}
 
