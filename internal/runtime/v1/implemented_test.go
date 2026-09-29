@@ -13,9 +13,9 @@ func TestDefaultHandlerRead(t *testing.T) {
 		ctx  Context
 		key  fields.Key
 	}{
-		{"nil key", NewContext(context.Background(), "user", 1), nil},
-		{"empty key", NewContext(context.Background(), "user", 1), fields.Key{}},
-		{"key", NewContext(context.Background(), "user", 1), fields.Key("record")},
+		{"nil key", NewContext(context.Background(), "user", 1, false), nil},
+		{"empty key", NewContext(context.Background(), "user", 1, false), fields.Key{}},
+		{"key", NewContext(context.Background(), "user", 1, false), fields.Key("record")},
 		{"zero context", Context{}, fields.Key("record")},
 	}
 
