@@ -30,25 +30,26 @@ jobs:
             git diff --exit-code -- go.sum
           fi
 
-      - name: Vet
+      - name: Detect Go packages
+        id: go
         run: |
-          pkgs=$(go list ./... 2>/dev/null || true)
-          if [ -z "$pkgs" ]; then
-            echo "No Go packages found; skipping vet"
-            exit 0
+          if [ -n "$(go list ./... 2>/dev/null || true)" ]; then
+            echo "packages=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "packages=false" >> "$GITHUB_OUTPUT"
+            echo "No Go packages found; vet/test/lint will be skipped"
           fi
-          go vet ./...
+
+      - name: Vet
+        if: steps.go.outputs.packages == 'true'
+        run: go vet ./...
 
       - name: Test
-        run: |
-          pkgs=$(go list ./... 2>/dev/null || true)
-          if [ -z "$pkgs" ]; then
-            echo "No Go packages found; skipping tests"
-            exit 0
-          fi
-          go test -race ./...
+        if: steps.go.outputs.packages == 'true'
+        run: go test -race ./...
 
       - name: Lint
+        if: steps.go.outputs.packages == 'true'
         uses: golangci/golangci-lint-action@v9.3.0
         with:
           version: latest
