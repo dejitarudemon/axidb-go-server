@@ -11,10 +11,10 @@ import (
 //
 // It holds the request decoder, the allowed protocol versions and compressors,
 // and the read, write, delete, and auth handlers. Read, write, delete, and ping
-// are handled. Batch is not implemented yet. [Runtime.Handle] answers protocol
-// errors when the frame was fully read. It returns [errs.ErrCloseConnection]
-// when the connection with this client must be closed, and [errs.ErrLogAndIgnore] when
-// the caller must log the failure, write nothing, and keep the connection.
+// are handled. Batch is not implemented yet. [Runtime.Handle] yields protocol
+// error answers when the frame was fully read. A yielded [errs.ErrCloseConnection]
+// means the connection with this client must be closed, and [errs.ErrLogAndIgnore]
+// means the caller must log the failure, write nothing, and keep the connection.
 type Runtime struct {
 	decoder decoder.Decoder
 

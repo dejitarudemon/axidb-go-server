@@ -4,7 +4,7 @@
 // and read, write, delete, and auth handlers. Handlers receive a [Context]
 // with the caller login, the request id, and whether the request is external.
 // [Runtime.Handshake] authenticates the client and returns a [row.RequestRow].
-// [Runtime.Handle] reads one frame and returns the encoded answer.
+// [Runtime.Handle] reads one frame and yields its encoded answers.
 // Read, write, delete, and ping are handled. Batch is not implemented yet.
 //
 // A nil error means the caller writes the bytes and keeps the connection.
