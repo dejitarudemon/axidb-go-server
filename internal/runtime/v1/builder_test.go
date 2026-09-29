@@ -52,7 +52,7 @@ func TestNewRuntimerBuilderZeroConfig(t *testing.T) {
 
 	assertDefaultHandlers(t, rt)
 
-	raw := encodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Read("x")}, nil)
+	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Read("x")}, nil)
 	_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
 
 	if _, ok := errors.AsType[errs.ErrorBodyLimitIsExceeded](err); !ok {
@@ -187,7 +187,7 @@ func TestRuntimeBuilderBodyLimit(t *testing.T) {
 				t.Fatalf("limit = %d, want %d", rt.limit, tt.limit)
 			}
 
-			_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(encodeFrame(t, body, nil))))
+			_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(mustEncodeFrame(t, body, nil))))
 
 			_, got := errors.AsType[errs.ErrorBodyLimitIsExceeded](err)
 			if got != tt.wantErr {
@@ -202,7 +202,7 @@ func TestRuntimeBuilderDecoderUsesCompressor(t *testing.T) {
 	cfg := NewRuntimeBuilderConfig().WithCompressors(zstd)
 	rt := NewRuntimerBuilder(*cfg).Build()
 
-	raw := encodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, zstd)
+	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, zstd)
 	got, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
 	if err != nil {
 		t.Fatalf("decode = %v", err)
@@ -215,7 +215,7 @@ func TestRuntimeBuilderDecoderUsesCompressor(t *testing.T) {
 
 func TestRuntimeBuilderDecoderRejectsUnknownCompression(t *testing.T) {
 	rt := NewRuntimerBuilder(*NewRuntimeBuilderConfig()).Build()
-	raw := encodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, stubCompressor{code: fields.S2})
+	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, stubCompressor{code: fields.S2})
 
 	_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
 
@@ -313,7 +313,7 @@ func assertDefaultHandlers(t *testing.T, rt Runtime) {
 func assertDecodesPing(t *testing.T, rt Runtime) {
 	t.Helper()
 
-	raw := encodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, nil)
+	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, nil)
 	got, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
 	if err != nil {
 		t.Fatalf("decode = %v", err)
@@ -324,7 +324,7 @@ func assertDecodesPing(t *testing.T, rt Runtime) {
 	}
 }
 
-func encodeFrame(t *testing.T, f frame.Frame, c compressor.Compressor) []byte {
+func mustEncodeFrame(t *testing.T, f frame.Frame, c compressor.Compressor) []byte {
 	t.Helper()
 
 	var buf buffer.Slice
