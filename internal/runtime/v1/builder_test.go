@@ -47,8 +47,7 @@ func TestNewRuntimerBuilderZeroConfig(t *testing.T) {
 	raw := encodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Read("x")}, nil)
 	_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
 
-	var exceeded errs.ErrorBodyLimitIsExceeded
-	if !errors.As(err, &exceeded) {
+	if _, ok := errors.AsType[errs.ErrorBodyLimitIsExceeded](err); !ok {
 		t.Fatalf("error = %v, want ErrorBodyLimitIsExceeded", err)
 	}
 }
@@ -178,8 +177,7 @@ func TestRuntimeBuilderBodyLimit(t *testing.T) {
 			rt := NewRuntimerBuilder(*cfg).Build()
 			_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(encodeFrame(t, body, nil))))
 
-			var exceeded errs.ErrorBodyLimitIsExceeded
-			got := errors.As(err, &exceeded)
+			_, got := errors.AsType[errs.ErrorBodyLimitIsExceeded](err)
 			if got != tt.wantErr {
 				t.Fatalf("body limit exceeded = %v, error = %v, want exceeded %v", got, err, tt.wantErr)
 			}
@@ -209,8 +207,7 @@ func TestRuntimeBuilderDecoderRejectsUnknownCompression(t *testing.T) {
 
 	_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
 
-	var unsupported errs.ErrorUnsupportedCompression
-	if !errors.As(err, &unsupported) {
+	if _, ok := errors.AsType[errs.ErrorUnsupportedCompression](err); !ok {
 		t.Fatalf("error = %v, want ErrorUnsupportedCompression", err)
 	}
 }

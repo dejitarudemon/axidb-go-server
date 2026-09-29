@@ -160,8 +160,7 @@ func TestRequestRowConcurrentDuplicate(t *testing.T) {
 				return
 			}
 
-			var got errs.ErrorRequestsConflict
-			if !errors.As(err, &got) {
+			if _, ok := errors.AsType[errs.ErrorRequestsConflict](err); !ok {
 				t.Errorf("error = %v, want ErrorRequestsConflict", err)
 				return
 			}
@@ -215,8 +214,8 @@ func TestRequestRowNilPanics(t *testing.T) {
 func assertRequestsConflict(t *testing.T, err error, id fields.RequestID) {
 	t.Helper()
 
-	var conflict errs.ErrorRequestsConflict
-	if !errors.As(err, &conflict) {
+	conflict, ok := errors.AsType[errs.ErrorRequestsConflict](err)
+	if !ok {
 		t.Fatalf("error = %v, want ErrorRequestsConflict", err)
 	}
 
