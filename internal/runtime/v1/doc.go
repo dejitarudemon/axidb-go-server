@@ -5,7 +5,11 @@
 // with the caller login, the request id, and whether the request is external.
 // [Runtime.Handshake] authenticates the client and returns a [row.RequestRow].
 // [Runtime.Handle] reads one frame and yields its encoded answers.
-// Read, write, delete, and ping are handled. Batch is not implemented yet.
+// Read, write, delete, ping, and batch are handled. A batch yields one frame
+// per nested command, or one combined answer when the batch asks for it.
+// Without sequential execution the nested commands run concurrently, up to
+// [config.RuntimeBuilderConfig.MaxGoroutinesPerBatch], and separate frames are
+// yielded as they finish.
 //
 // A nil error means the caller writes the bytes and keeps the connection.
 // [errs.ErrCloseConnection] means the connection with this client must be closed.
