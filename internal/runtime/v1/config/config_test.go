@@ -34,6 +34,10 @@ func TestNewRuntimeBuilderConfigDefaults(t *testing.T) {
 		t.Errorf("batch = %d, want %d", cfg.limits.batch, defaultBatchLimit)
 	}
 
+	if cfg.limits.goroutines != defaultGoroutinesPerParrallelBatch {
+		t.Errorf("goroutines = %d, want %d", cfg.limits.goroutines, defaultGoroutinesPerParrallelBatch)
+	}
+
 	if !slices.Equal(cfg.versions, []fields.Version{1}) {
 		t.Errorf("versions = %v, want [1]", cfg.versions)
 	}
@@ -80,6 +84,28 @@ func TestRuntimeBuilderConfigLimits(t *testing.T) {
 
 			if cfg.limits.batch != tt.batch {
 				t.Errorf("batch = %d, want %d", cfg.limits.batch, tt.batch)
+			}
+		})
+	}
+}
+
+func TestRuntimeBuilderConfigGoroutines(t *testing.T) {
+	tests := []struct {
+		name string
+		set  int
+		want int
+	}{
+		{"zero becomes one", 0, 1},
+		{"negative becomes one", -3, 1},
+		{"one", 1, 1},
+		{"above default", 8, 8},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := NewRuntimeBuilderConfig().WithMaxGoroutinesPerBatch(tt.set)
+			if cfg.MaxGoroutinesPerBatch() != tt.want {
+				t.Errorf("goroutines = %d, want %d", cfg.MaxGoroutinesPerBatch(), tt.want)
 			}
 		})
 	}
@@ -159,6 +185,7 @@ func TestRuntimeBuilderConfigNilPanics(t *testing.T) {
 	}{
 		{"body", func() { cfg.WithBodyLimit(1) }},
 		{"batch", func() { cfg.WithBatchLimit(1) }},
+		{"goroutines", func() { cfg.WithMaxGoroutinesPerBatch(1) }},
 		{"compressors", func() { cfg.WithCompressors(stubCompressor{code: fields.Zstd}) }},
 		{"versions", func() { cfg.WithAllowedVersions(1) }},
 	}

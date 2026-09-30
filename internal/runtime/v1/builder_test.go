@@ -47,6 +47,10 @@ func TestNewRuntimerBuilderDefaults(t *testing.T) {
 		t.Errorf("limit = %d, want %d", rt.limit, config.NewRuntimeBuilderConfig().BodyLimit())
 	}
 
+	if rt.maxGoroutinePerBatch != config.NewRuntimeBuilderConfig().MaxGoroutinesPerBatch() {
+		t.Errorf("goroutines = %d, want %d", rt.maxGoroutinePerBatch, config.NewRuntimeBuilderConfig().MaxGoroutinesPerBatch())
+	}
+
 	assertDefaultHandlers(t, rt)
 	assertDecodesPing(t, rt)
 }
@@ -64,6 +68,10 @@ func TestNewRuntimerBuilderZeroConfig(t *testing.T) {
 
 	if rt.limit != 0 {
 		t.Errorf("limit = %d, want 0", rt.limit)
+	}
+
+	if rt.maxGoroutinePerBatch != 0 {
+		t.Errorf("goroutines = %d, want 0", rt.maxGoroutinePerBatch)
 	}
 
 	assertDefaultHandlers(t, rt)
