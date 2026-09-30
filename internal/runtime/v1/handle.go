@@ -25,7 +25,7 @@ import (
 // the frame was consumed: the caller logs the error, writes nothing, and
 // keeps the connection.
 //
-// Read, write, and delete stay registered until their single answer is yielded.
+// Read, write, delete, and ping stay registered until their single answer is yielded.
 // A batch stays registered until every answer has been yielded, or until the
 // iteration stops with an error. Stopping the range releases the batch too.
 func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) FrameIterator {
@@ -87,7 +87,7 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *r
 
 			return
 
-		case fields.Read, fields.Write, fields.Delete:
+		case fields.Read, fields.Write, fields.Delete, fields.Ping:
 			if err := requestRow.Register(request.RequestID, true); err != nil {
 				yield(r.writeErrAnswer(request.RequestID, err))
 				return
