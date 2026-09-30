@@ -28,6 +28,7 @@ import (
 // Read, write, delete, and ping stay registered until their single answer is yielded.
 // A batch stays registered until every answer has been yielded, or until the
 // iteration stops with an error. Stopping the range releases the batch too.
+// A cancelled ctx is answered with [protocolerrs.ErrorRequestInterrupted].
 func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) FrameIterator {
 	return func(yield yieldFrameIterator) {
 		if requestRow == nil {
@@ -84,7 +85,6 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *r
 					return
 				}
 			}
-
 			return
 
 		case fields.Read, fields.Write, fields.Delete, fields.Ping:
@@ -94,7 +94,12 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *r
 			}
 
 			defer requestRow.Terminate(request.RequestID)
-			yield(r.handleRequest(NewContext(ctx, requestRow.Login(), request.RequestID, true), request.Body))
+			encoded, err := r.handleRequest(NewContext(ctx, requestRow.Login(), request.RequestID, true), request.Body)
+			if ctx.Err() != nil {
+				yield(r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorRequestInterrupted(request.RequestID)))
+				return
+			}
+			yield(encoded, err)
 			return
 		}
 
