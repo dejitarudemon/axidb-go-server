@@ -12,6 +12,9 @@ const (
 	defaultBodyLimit = 10 << 10
 	// defaultBatchLimit is the default max number of operations in one batch (64).
 	defaultBatchLimit = 1 << 6
+	// defaultGoroutinesPerParrallelBatch is how many nested commands of one
+	// parallel batch may run at once when the config does not set another limit.
+	defaultGoroutinesPerParrallelBatch = 4
 )
 
 var (
@@ -21,8 +24,10 @@ var (
 
 // limits holds decoder/runtime size constraints from [RuntimeBuilderConfig].
 type limits struct {
-	body  fields.BodyLimit
-	batch fields.BatchLimit
+	body       fields.BodyLimit
+	batch      fields.BatchLimit
+	// goroutines is how many nested commands of one parallel batch may run at once.
+	goroutines int
 }
 
 // RuntimeBuilderConfig holds construction options for the v1 runtime builder.
@@ -35,13 +40,14 @@ type RuntimeBuilderConfig struct {
 }
 
 // NewRuntimeBuilderConfig returns a config with default limits (10 KiB body,
-// 64 operations per batch), protocol version 1 allowed, and no compressors
-// registered (requests are accepted only uncompressed).
+// 64 operations per batch, 4 goroutines per parallel batch), protocol version 1
+// allowed, and no compressors registered (requests are accepted only uncompressed).
 func NewRuntimeBuilderConfig() *RuntimeBuilderConfig {
 	return &RuntimeBuilderConfig{
 		limits: limits{
-			body:  defaultBodyLimit,
-			batch: defaultBatchLimit,
+			body:       defaultBodyLimit,
+			batch:      defaultBatchLimit,
+			goroutines: defaultGoroutinesPerParrallelBatch,
 		},
 		versions:    append([]fields.Version(nil), defaultVersions...),
 		compressors: make([]compressor.Compressor, 0),
@@ -57,6 +63,14 @@ func (rbc *RuntimeBuilderConfig) WithBodyLimit(limit fields.BodyLimit) *RuntimeB
 // WithBatchLimit sets the maximum number of operations allowed in one batch.
 func (rbc *RuntimeBuilderConfig) WithBatchLimit(limit fields.BatchLimit) *RuntimeBuilderConfig {
 	rbc.limits.batch = limit
+	return rbc
+}
+
+// WithMaxGoroutinesPerBatch sets how many nested commands of one parallel batch
+// may run at once. A value below 1 is raised to 1. A sequential batch runs one
+// command at a time and does not use this limit.
+func (rbc *RuntimeBuilderConfig) WithMaxGoroutinesPerBatch(goroutines int) *RuntimeBuilderConfig {
+	rbc.limits.goroutines = max(goroutines, 1)
 	return rbc
 }
 
@@ -102,6 +116,11 @@ func (rbc *RuntimeBuilderConfig) Versions() []fields.Version {
 // Compressors returns the compressors this config allows.
 func (rbc *RuntimeBuilderConfig) Compressors() []compressor.Compressor {
 	return rbc.compressors
+}
+
+// MaxGoroutinesPerBatch returns how many nested commands of one parallel batch may run at once.
+func (rbc *RuntimeBuilderConfig) MaxGoroutinesPerBatch() int {
+	return rbc.limits.goroutines
 }
 
 func (rbc *RuntimeBuilderConfig) hasCompressor(code fields.Compression) bool {
