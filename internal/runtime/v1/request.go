@@ -15,8 +15,8 @@ import (
 // handled by [Runtime.handleBatch], not here. A handler error is answered to
 // the client. An encoding failure is answered to the client as well.
 func (r Runtime) handleRequest(ctx Context, body body.Body) ([]byte, error) {
-	result := frame.Frame{}
-	handlerErr := error(nil)
+	var result frame.Frame
+	var handlerErr error
 
 	switch body.Command() {
 	case fields.Read:
