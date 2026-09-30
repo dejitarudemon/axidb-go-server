@@ -11,9 +11,9 @@ import (
 
 // handleRequest runs the handler for body and returns the encoded answer.
 //
-// Read, write, delete, and ping are dispatched to their handlers. Batch is not
-// implemented. A handler error is answered to the client. An encoding failure
-// is answered to the client as well.
+// Read, write, delete, and ping are dispatched to their handlers. Batch is
+// handled by [Runtime.handleBatch], not here. A handler error is answered to
+// the client. An encoding failure is answered to the client as well.
 func (r Runtime) handleRequest(ctx Context, body body.Body) ([]byte, error) {
 	result := frame.Frame{}
 	handlerErr := error(nil)
@@ -27,8 +27,6 @@ func (r Runtime) handleRequest(ctx Context, body body.Body) ([]byte, error) {
 		result, handlerErr = r.handleDelete(ctx, body)
 	case fields.Ping:
 		result, handlerErr = r.handlePing(ctx)
-	case fields.Batch:
-		// handle Batch
 	default:
 		return r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorUnsupportedCommand(body.Command()))
 	}

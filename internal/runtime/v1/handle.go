@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"iter"
 
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/err"
@@ -29,8 +28,8 @@ import (
 // Read, write, and delete stay registered until their single answer is yielded.
 // A batch stays registered until every answer has been yielded, or until the
 // iteration stops with an error. Stopping the range releases the batch too.
-func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) iter.Seq2[[]byte, error] {
-	return func(yield func([]byte, error) bool) {
+func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) FrameIterator {
+	return func(yield yieldFrameIterator) {
 		if requestRow == nil {
 			yield(nil, errs.CloseConnection(errs.ErrNilRequestRow))
 			return
@@ -80,7 +79,12 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *r
 			}
 
 			defer requestRow.Terminate(request.RequestID)
-			r.yieldBatch(NewContext(ctx, requestRow.Login(), request.RequestID, true), request.Body, yield)
+			for result, err := range r.handleBatch(NewContext(ctx, requestRow.Login(), request.RequestID, true), request.Body) {
+				if !yield(result, err) {
+					return
+				}
+			}
+
 			return
 
 		case fields.Read, fields.Write, fields.Delete:
@@ -96,15 +100,6 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *r
 
 		yield(r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnsupportedCommand(request.Body.Command())))
 	}
-}
-
-// yieldBatch yields the answers of one batch, then returns.
-//
-// The caller removes the batch request id after yieldBatch returns, so the id
-// stays registered while answers are still being produced. An error yield ends
-// the batch. A false yield means the caller stopped ranging and the batch ends too.
-func (r Runtime) yieldBatch(ctx Context, b body.Body, yield func([]byte, error) bool) {
-	yield(r.handleRequest(ctx, b))
 }
 
 // decodeClosesConnection reports a failure that leaves the stream unusable.
