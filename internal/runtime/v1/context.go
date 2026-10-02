@@ -22,12 +22,14 @@ type Context struct {
 	login      string
 	requestID  fields.RequestID
 	isExternal bool
+
+	state *executionState
 }
 
 // NewContext returns a Context that wraps parent and stores login, requestID,
 // and isExternal. Login must be non-empty; see [Context] for how it is sourced.
 func NewContext(parent context.Context, login string, requestID fields.RequestID, isExternal bool) Context {
-	return Context{parent, login, requestID, isExternal}
+	return Context{parent, login, requestID, isExternal, &executionState{}}
 }
 
 // Login returns the caller login associated with this request.

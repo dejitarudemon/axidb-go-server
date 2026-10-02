@@ -1,6 +1,9 @@
 package runtime_v1
 
 import (
+	"sync"
+
+	"github.com/dejitarudemon/axidb-go-protocol/v1/buffer"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/compressor"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/decoder"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
@@ -37,6 +40,12 @@ func NewRuntimerBuilder(cfg config.RuntimeBuilderConfig) *RuntimeBuilder {
 
 			limit:                int(cfg.BodyLimit()),
 			maxGoroutinePerBatch: cfg.MaxGoroutinesPerBatch(),
+
+			pool: &sync.Pool{
+				New: func() any {
+					return &buffer.Slice{}
+				},
+			},
 		},
 	}
 }
