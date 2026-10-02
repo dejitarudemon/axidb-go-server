@@ -236,6 +236,104 @@ func TestTerminate(t *testing.T) {
 	assertNotGranted(t, table, conn, 1)
 }
 
+func TestStats(t *testing.T) {
+	table := NewConnectionsTable()
+	first := newConn(t)
+	second := newConn(t)
+	firstV1 := &stubRow{n: 3}
+	firstV2 := &stubRow{n: 0}
+	secondV1 := &stubRow{n: 5}
+
+	assertStats(t, table.Stats(), stats())
+
+	if err := table.Register(first); err != nil {
+		t.Fatalf("Register(first) = %v", err)
+	}
+	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
+		s.ConnectionsTotal = 1
+	}))
+
+	if err := table.Activate(first, 1, firstV1); err == nil {
+		t.Fatal("Activate() before Grant succeeded")
+	}
+	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
+		s.ConnectionsTotal = 1
+	}))
+
+	if err := table.Grant(first, 1, 2); err != nil {
+		t.Fatalf("Grant(first) = %v", err)
+	}
+	if err := table.Grant(first, 1); err != nil {
+		t.Fatalf("Grant(first) again = %v", err)
+	}
+	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
+		s.ConnectionsTotal = 1
+		s.ConnectionsPerVersion[1] = 1
+		s.ConnectionsPerVersion[2] = 1
+		s.VersionsGranted = 2
+	}))
+
+	if err := table.Activate(first, 1, firstV1); err != nil {
+		t.Fatalf("Activate(first, 1) = %v", err)
+	}
+	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
+		s.ConnectionsTotal = 1
+		s.ConnectionsPerVersion[1] = 1
+		s.ConnectionsPerVersion[2] = 1
+		s.VersionsGranted = 2
+		s.VersionsActive = 1
+		s.RequestsTotal = 3
+		s.RequestsPerVersion[1] = 3
+	}))
+
+	if err := table.Activate(first, 2, firstV2); err != nil {
+		t.Fatalf("Activate(first, 2) = %v", err)
+	}
+	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
+		s.ConnectionsTotal = 1
+		s.ConnectionsPerVersion[1] = 1
+		s.ConnectionsPerVersion[2] = 1
+		s.VersionsGranted = 2
+		s.VersionsActive = 2
+		s.RequestsTotal = 3
+		s.RequestsPerVersion[1] = 3
+		s.RequestsPerVersion[2] = 0
+	}))
+
+	if err := table.Register(second); err != nil {
+		t.Fatalf("Register(second) = %v", err)
+	}
+	if err := table.Grant(second, 1); err != nil {
+		t.Fatalf("Grant(second) = %v", err)
+	}
+	if err := table.Activate(second, 1, secondV1); err != nil {
+		t.Fatalf("Activate(second, 1) = %v", err)
+	}
+	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
+		s.ConnectionsTotal = 2
+		s.ConnectionsPerVersion[1] = 2
+		s.ConnectionsPerVersion[2] = 1
+		s.VersionsGranted = 3
+		s.VersionsActive = 3
+		s.RequestsTotal = 8
+		s.RequestsPerVersion[1] = 8
+		s.RequestsPerVersion[2] = 0
+	}))
+
+	table.Terminate(first)
+	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
+		s.ConnectionsTotal = 1
+		s.ConnectionsPerVersion[1] = 1
+		s.VersionsGranted = 1
+		s.VersionsActive = 1
+		s.RequestsTotal = 5
+		s.RequestsPerVersion[1] = 5
+	}))
+
+	table.Terminate(second)
+	assertStats(t, table.Stats(), stats())
+}
+
 func TestConcurrentConnections(t *testing.T) {
 	table := NewConnectionsTable()
 	const n = 32
@@ -314,6 +412,45 @@ func assertNotGranted(t *testing.T, table *ConnectionsTable, conn net.Conn, vers
 	if err == nil || !strings.Contains(err.Error(), "not granted") {
 		t.Fatalf("Get(%d) = %v, want not granted", version, err)
 	}
+}
+
+func stats(apply ...func(*ConnectionsTableStats)) ConnectionsTableStats {
+	got := NewConnectionsTableStats()
+	for _, fn := range apply {
+		fn(&got)
+	}
+	return got
+}
+
+func assertStats(t *testing.T, got, want ConnectionsTableStats) {
+	t.Helper()
+
+	if !sameStats(got, want) {
+		t.Fatalf("Stats() = %+v, want %+v", got, want)
+	}
+}
+
+func sameStats(got, want ConnectionsTableStats) bool {
+	if got.ConnectionsTotal != want.ConnectionsTotal ||
+		got.RequestsTotal != want.RequestsTotal ||
+		got.VersionsGranted != want.VersionsGranted ||
+		got.VersionsActive != want.VersionsActive ||
+		len(got.ConnectionsPerVersion) != len(want.ConnectionsPerVersion) ||
+		len(got.RequestsPerVersion) != len(want.RequestsPerVersion) {
+		return false
+	}
+
+	for version, count := range want.ConnectionsPerVersion {
+		if got.ConnectionsPerVersion[version] != count {
+			return false
+		}
+	}
+	for version, count := range want.RequestsPerVersion {
+		if got.RequestsPerVersion[version] != count {
+			return false
+		}
+	}
+	return true
 }
 
 func assertNotActivated(t *testing.T, table *ConnectionsTable, conn net.Conn, version fields.Version) {
