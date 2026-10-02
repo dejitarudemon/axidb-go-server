@@ -6,7 +6,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	"github.com/dejitarudemon/axidb-go-protocol/v0/fields"
 )
 
 // if grant is true, it means the conn doesn't need authorized
