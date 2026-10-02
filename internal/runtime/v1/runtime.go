@@ -1,6 +1,8 @@
 package runtime_v1
 
 import (
+	"sync"
+
 	"github.com/dejitarudemon/axidb-go-protocol/v1/compressor"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/decoder"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
@@ -34,4 +36,6 @@ type Runtime struct {
 
 	// limit is the maximum encoded frame body size in bytes.
 	limit int
+
+	pool *sync.Pool
 }
