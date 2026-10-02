@@ -28,7 +28,7 @@ func TestRegister(t *testing.T) {
 	}
 
 	err = table.Register(conn)
-	if got := assertError[ErrorConnectionAlreadyRegistered](t, err); got.Connection() != conn {
+	if got := asError[ErrorConnectionAlreadyRegistered](t, err); got.Connection() != conn {
 		t.Fatalf("connection = %v, want %v", got.Connection(), conn)
 	}
 }
@@ -41,7 +41,7 @@ func TestGrant(t *testing.T) {
 	assertError[ErrorNilConnection](t, err)
 
 	err = table.Grant(conn, 1)
-	if got := assertError[ErrorConnectionNotRegistered](t, err); got.Connection() != conn {
+	if got := asError[ErrorConnectionNotRegistered](t, err); got.Connection() != conn {
 		t.Fatalf("connection = %v, want %v", got.Connection(), conn)
 	}
 
@@ -78,7 +78,7 @@ func TestActivate(t *testing.T) {
 	assertError[ErrorNilRegistrationRow](t, err)
 
 	err = table.Activate(conn, 1, row)
-	if got := assertError[ErrorConnectionNotRegistered](t, err); got.Connection() != conn {
+	if got := asError[ErrorConnectionNotRegistered](t, err); got.Connection() != conn {
 		t.Fatalf("connection = %v, want %v", got.Connection(), conn)
 	}
 
@@ -87,7 +87,7 @@ func TestActivate(t *testing.T) {
 	}
 
 	err = table.Activate(conn, 1, row)
-	if got := assertError[ErrorVersionNotGranted](t, err); got.Version() != 1 || got.Connection() != conn {
+	if got := asError[ErrorVersionNotGranted](t, err); got.Version() != 1 || got.Connection() != conn {
 		t.Fatalf("error = %+v, want version 1 on this connection", got)
 	}
 
@@ -100,7 +100,7 @@ func TestActivate(t *testing.T) {
 	}
 
 	err = table.Activate(conn, 1, &stubRow{n: 9})
-	if got := assertError[ErrorVersionAlreadyActive](t, err); got.Version() != 1 || got.Connection() != conn {
+	if got := asError[ErrorVersionAlreadyActive](t, err); got.Version() != 1 || got.Connection() != conn {
 		t.Fatalf("error = %+v, want version 1 on this connection", got)
 	}
 
@@ -120,7 +120,7 @@ func TestGet(t *testing.T) {
 	assertError[ErrorNilConnection](t, err)
 
 	_, err = table.Get(conn, 1)
-	if got := assertError[ErrorConnectionNotRegistered](t, err); got.Connection() != conn {
+	if got := asError[ErrorConnectionNotRegistered](t, err); got.Connection() != conn {
 		t.Fatalf("connection = %v, want %v", got.Connection(), conn)
 	}
 }
@@ -218,13 +218,13 @@ func TestTerminate(t *testing.T) {
 
 	table.Terminate(conn)
 
-	if _, err := table.Get(conn, 1); assertError[ErrorConnectionNotRegistered](t, err).Connection() != conn {
+	if _, err := table.Get(conn, 1); asError[ErrorConnectionNotRegistered](t, err).Connection() != conn {
 		t.Fatal("Get() after Terminate named another connection")
 	}
-	if err := table.Grant(conn, 1); assertError[ErrorConnectionNotRegistered](t, err).Connection() != conn {
+	if err := table.Grant(conn, 1); asError[ErrorConnectionNotRegistered](t, err).Connection() != conn {
 		t.Fatal("Grant() after Terminate named another connection")
 	}
-	if err := table.Activate(conn, 1, row); assertError[ErrorConnectionNotRegistered](t, err).Connection() != conn {
+	if err := table.Activate(conn, 1, row); asError[ErrorConnectionNotRegistered](t, err).Connection() != conn {
 		t.Fatal("Activate() after Terminate named another connection")
 	}
 
@@ -444,7 +444,16 @@ func TestStatsConcurrent(t *testing.T) {
 	assertStats(t, table.Stats(), stats())
 }
 
-func assertError[T error](t *testing.T, err error) T {
+func assertError[T error](t *testing.T, err error) {
+	t.Helper()
+
+	if _, ok := errors.AsType[T](err); !ok {
+		var want T
+		t.Fatalf("error = %T(%v), want %T", err, err, want)
+	}
+}
+
+func asError[T error](t *testing.T, err error) T {
 	t.Helper()
 
 	got, ok := errors.AsType[T](err)
@@ -483,7 +492,7 @@ func assertNotGranted(t *testing.T, table *ConnectionsTable, conn net.Conn, vers
 	t.Helper()
 
 	_, err := table.Get(conn, version)
-	if got := assertError[ErrorVersionNotGranted](t, err); got.Version() != version || got.Connection() != conn {
+	if got := asError[ErrorVersionNotGranted](t, err); got.Version() != version || got.Connection() != conn {
 		t.Fatalf("Get(%d) = %+v, want this connection", version, got)
 	}
 }
@@ -556,7 +565,7 @@ func assertNotActivated(t *testing.T, table *ConnectionsTable, conn net.Conn, ve
 	t.Helper()
 
 	_, err := table.Get(conn, version)
-	if got := assertError[ErrorVersionNotActivated](t, err); got.Version() != version || got.Connection() != conn {
+	if got := asError[ErrorVersionNotActivated](t, err); got.Version() != version || got.Connection() != conn {
 		t.Fatalf("Get(%d) = %+v, want this connection", version, got)
 	}
 }
