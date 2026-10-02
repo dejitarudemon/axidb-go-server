@@ -12,7 +12,7 @@ import (
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
 )
 
-// Handshake reads the first frame from reader and authenticates the client.
+// Activate reads the first frame from reader and authenticates the client.
 //
 // On success it returns the [row.RequestRow] for the login, the protocol versions
 // this runtime accepts, and the encoded handshake answer. source is reported
@@ -22,7 +22,7 @@ import (
 // An error for which errors.Is(err, [errs.ErrCloseConnection]) is true means
 // the connection with this client must be closed. The caller does not keep
 // reading frames.
-func (r Runtime) Handshake(ctx context.Context, reader *bufio.Reader, source []byte) (*row.RequestRow, []fields.Version, []byte, error) {
+func (r Runtime) Activate(ctx context.Context, reader *bufio.Reader, source []byte, skipAuth bool) (*row.RequestRow, []fields.Version, []byte, error) {
 	request, err := r.decoder.DecodeFrame(reader)
 	if err != nil {
 		if decodeClosesConnection(err) {
@@ -47,12 +47,14 @@ func (r Runtime) Handshake(ctx context.Context, reader *bufio.Reader, source []b
 
 	requestCtx := NewContext(ctx, hb.Login, request.RequestID, true)
 
-	if ok, err := r.handlerAuth(requestCtx, hb.Login, hb.Hash); err != nil {
-		answer, err := r.writeErrAnswer(request.RequestID, err)
-		return nil, nil, answer, err
-	} else if !ok {
-		answer, err := r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnauthorized(source))
-		return nil, nil, answer, err
+	if !skipAuth {
+		if ok, err := r.handlerAuth(requestCtx, hb.Login, hb.Hash); err != nil {
+			answer, err := r.writeErrAnswer(request.RequestID, err)
+			return nil, nil, answer, err
+		} else if !ok {
+			answer, err := r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnauthorized(source))
+			return nil, nil, answer, err
+		}
 	}
 
 	allowedCompressions := make([]fields.Compression, 0, len(r.allowedCompressions))
