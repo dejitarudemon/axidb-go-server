@@ -7,17 +7,17 @@ import "github.com/dejitarudemon/axidb-go-protocol/v0/fields"
 // The maps are non-nil and belong to the snapshot. Changing them does not
 // change the table.
 type ConnectionsTableStats struct {
-	// ConnectionsTotal is the number of registered connections, including
+	// ConnectionsActive is the number of registered connections, including
 	// connections with no recorded versions.
-	ConnectionsTotal int
+	ConnectionsActive int
 
 	// ConnectionsPerVersion counts, for each version, how many connections have
 	// that version recorded.
 	ConnectionsPerVersion map[fields.Version]int
 
-	// RequestsTotal is the sum of [RegistrationRow.Count] over rows stored in
+	// RequestsActive is the sum of [RegistrationRow.Count] over rows stored in
 	// the table.
-	RequestsTotal int
+	RequestsActive int
 
 	// RequestsPerVersion is the sum of [RegistrationRow.Count] for each version.
 	// A stored row whose Count is zero is included as zero.

@@ -179,7 +179,7 @@ func (c *ConnectionsTable) Stats() ConnectionsTableStats {
 	stats := NewConnectionsTableStats()
 
 	for _, versions := range c.table {
-		stats.ConnectionsTotal++
+		stats.ConnectionsActive++
 
 		for version, table := range versions {
 			stats.ConnectionsPerVersion[version]++
@@ -190,7 +190,7 @@ func (c *ConnectionsTable) Stats() ConnectionsTableStats {
 
 			if table.row != nil {
 				stats.VersionsActive++
-				stats.RequestsTotal += table.row.Count()
+				stats.RequestsActive += table.row.Count()
 				stats.RequestsPerVersion[version] += table.row.Count()
 			}
 		}

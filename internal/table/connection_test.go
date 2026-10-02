@@ -251,14 +251,14 @@ func TestStats(t *testing.T) {
 		t.Fatalf("Register(first) = %v", err)
 	}
 	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
-		s.ConnectionsTotal = 1
+		s.ConnectionsActive = 1
 	}))
 
 	if err := table.Activate(first, 1, firstV1); err == nil {
 		t.Fatal("Activate() before Grant succeeded")
 	}
 	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
-		s.ConnectionsTotal = 1
+		s.ConnectionsActive = 1
 	}))
 
 	if err := table.Grant(first, 1, 2); err != nil {
@@ -268,7 +268,7 @@ func TestStats(t *testing.T) {
 		t.Fatalf("Grant(first) again = %v", err)
 	}
 	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
-		s.ConnectionsTotal = 1
+		s.ConnectionsActive = 1
 		s.ConnectionsPerVersion[1] = 1
 		s.ConnectionsPerVersion[2] = 1
 		s.VersionsGranted = 2
@@ -278,12 +278,12 @@ func TestStats(t *testing.T) {
 		t.Fatalf("Activate(first, 1) = %v", err)
 	}
 	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
-		s.ConnectionsTotal = 1
+		s.ConnectionsActive = 1
 		s.ConnectionsPerVersion[1] = 1
 		s.ConnectionsPerVersion[2] = 1
 		s.VersionsGranted = 2
 		s.VersionsActive = 1
-		s.RequestsTotal = 3
+		s.RequestsActive = 3
 		s.RequestsPerVersion[1] = 3
 	}))
 
@@ -291,12 +291,12 @@ func TestStats(t *testing.T) {
 		t.Fatalf("Activate(first, 2) = %v", err)
 	}
 	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
-		s.ConnectionsTotal = 1
+		s.ConnectionsActive = 1
 		s.ConnectionsPerVersion[1] = 1
 		s.ConnectionsPerVersion[2] = 1
 		s.VersionsGranted = 2
 		s.VersionsActive = 2
-		s.RequestsTotal = 3
+		s.RequestsActive = 3
 		s.RequestsPerVersion[1] = 3
 		s.RequestsPerVersion[2] = 0
 	}))
@@ -311,23 +311,23 @@ func TestStats(t *testing.T) {
 		t.Fatalf("Activate(second, 1) = %v", err)
 	}
 	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
-		s.ConnectionsTotal = 2
+		s.ConnectionsActive = 2
 		s.ConnectionsPerVersion[1] = 2
 		s.ConnectionsPerVersion[2] = 1
 		s.VersionsGranted = 3
 		s.VersionsActive = 3
-		s.RequestsTotal = 8
+		s.RequestsActive = 8
 		s.RequestsPerVersion[1] = 8
 		s.RequestsPerVersion[2] = 0
 	}))
 
 	table.Terminate(first)
 	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
-		s.ConnectionsTotal = 1
+		s.ConnectionsActive = 1
 		s.ConnectionsPerVersion[1] = 1
 		s.VersionsGranted = 1
 		s.VersionsActive = 1
-		s.RequestsTotal = 5
+		s.RequestsActive = 5
 		s.RequestsPerVersion[1] = 5
 	}))
 
@@ -508,15 +508,15 @@ func checkStats(s ConnectionsTableStats) error {
 			return fmt.Errorf("requests recorded for version %d without a connection", version)
 		}
 	}
-	if requests != s.RequestsTotal {
-		return fmt.Errorf("RequestsTotal = %d, per version sum to %d", s.RequestsTotal, requests)
+	if requests != s.RequestsActive {
+		return fmt.Errorf("RequestsActive = %d, per version sum to %d", s.RequestsActive, requests)
 	}
 	return nil
 }
 
 func sameStats(got, want ConnectionsTableStats) bool {
-	if got.ConnectionsTotal != want.ConnectionsTotal ||
-		got.RequestsTotal != want.RequestsTotal ||
+	if got.ConnectionsActive != want.ConnectionsActive ||
+		got.RequestsActive != want.RequestsActive ||
 		got.VersionsGranted != want.VersionsGranted ||
 		got.VersionsActive != want.VersionsActive ||
 		len(got.ConnectionsPerVersion) != len(want.ConnectionsPerVersion) ||
