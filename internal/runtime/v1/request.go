@@ -7,19 +7,20 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/builder"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 )
 
-// handleRequest runs the handler for body and returns the encoded answer.
+// handleRequest yields the encoded answers for body.
 //
-// Read, write, delete, and ping are dispatched to their handlers. Batch is
-// handled by [Runtime.handleBatch], not here. A handler error is answered to
-// the client. An encoding failure is answered to the client as well.
+// Read, write, delete, ping, and batch are dispatched to their handlers.
+// A context that is already cancelled is answered with [protocolerrs.ErrorRequestInterrupted]
+// and the handler is skipped. A handler error is answered to the client. An encoding
+// failure of that error answer closes the connection. A batch answer that
+// cannot be encoded is yielded as that error.
 func (r Runtime) handleRequest(ctx Context, body body.Body, yield YieldFrameIterator) {
 	if ctx.Err() != nil {
-		yield(r.writeErrAnswer(ctx.RequestID(), errs.NewErrorRequestInterrupted(ctx.RequestID())))
+		yield(r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())))
 		return
 	}
 
@@ -39,17 +40,18 @@ func (r Runtime) handleRequest(ctx Context, body body.Body, yield YieldFrameIter
 	}
 }
 
-// handleRead calls the read handler for the key in body.
+// handleRead yields the read answer for the key in body.
 //
-// A nil value from the handler becomes [protocolerrs.ErrorNotFound]. A handler error
-// is returned unchanged. A cancelled context is [errs.ErrorRequestInterrupted].
-// On success it returns a read answer frame.
+// A nil value from the handler becomes [protocolerrs.ErrorNotFound]. A handler
+// error is answered to the client. When the context is cancelled during the
+// handler, the handler runs to completion and the answer is
+// [protocolerrs.ErrorRequestInterrupted]. On success it yields a read answer frame.
 func (r Runtime) handleRead(ctx Context, body body.Body, yield YieldFrameIterator) {
 	rb, _ := body.(bodies.Read)
 
 	value, err := r.handlerRead(ctx, fields.Key(rb))
 	if ctx.Err() != nil {
-		err = errs.NewErrorRequestInterrupted(ctx.RequestID())
+		err = protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())
 	}
 	if err != nil {
 		yield(r.writeErrAnswer(ctx.RequestID(), err))
@@ -67,19 +69,19 @@ func (r Runtime) handleRead(ctx Context, body body.Body, yield YieldFrameIterato
 	}
 
 	yield(r.encodeFrame(result, nil))
-	return
 }
 
-// handleWrite calls the write handler for the key and value in body.
+// handleWrite yields the write answer for the key and value in body.
 //
-// A handler error is returned unchanged. A cancelled context is
-// [errs.ErrorRequestInterrupted]. On success it returns a write answer frame.
+// A handler error is answered to the client. When the context is cancelled
+// during the handler, the handler runs to completion and the answer is
+// [protocolerrs.ErrorRequestInterrupted]. On success it yields a write answer frame.
 func (r Runtime) handleWrite(ctx Context, body body.Body, yield YieldFrameIterator) {
 	rw, _ := body.(bodies.Write)
 
 	err := r.handlerWrite(ctx, rw.Key, rw.Value)
 	if ctx.Err() != nil {
-		err = errs.NewErrorRequestInterrupted(ctx.RequestID())
+		err = protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())
 	}
 	if err != nil {
 		yield(r.writeErrAnswer(ctx.RequestID(), err))
@@ -93,19 +95,19 @@ func (r Runtime) handleWrite(ctx Context, body body.Body, yield YieldFrameIterat
 	}
 
 	yield(r.encodeFrame(result, nil))
-	return
 }
 
-// handleDelete calls the delete handler for the key in body.
+// handleDelete yields the delete answer for the key in body.
 //
-// A handler error is returned unchanged. A cancelled context is
-// [errs.ErrorRequestInterrupted]. On success it returns a delete answer frame.
+// A handler error is answered to the client. When the context is cancelled
+// during the handler, the handler runs to completion and the answer is
+// [protocolerrs.ErrorRequestInterrupted]. On success it yields a delete answer frame.
 func (r Runtime) handleDelete(ctx Context, body body.Body, yield YieldFrameIterator) {
 	rd, _ := body.(bodies.Delete)
 
 	err := r.handlerDelete(ctx, fields.Key(rd))
 	if ctx.Err() != nil {
-		err = errs.NewErrorRequestInterrupted(ctx.RequestID())
+		err = protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())
 	}
 	if err != nil {
 		yield(r.writeErrAnswer(ctx.RequestID(), err))
@@ -119,14 +121,13 @@ func (r Runtime) handleDelete(ctx Context, body body.Body, yield YieldFrameItera
 	}
 
 	yield(r.encodeFrame(result, nil))
-	return
 }
 
-// handlePing returns a ping answer for the request id in ctx.
-// A cancelled context is [errs.ErrorRequestInterrupted].
+// handlePing yields a ping answer for the request id in ctx.
+// A context that is already cancelled is answered with [protocolerrs.ErrorRequestInterrupted].
 func (r Runtime) handlePing(ctx Context, yield YieldFrameIterator) {
 	if ctx.Err() != nil {
-		yield(r.writeErrAnswer(ctx.RequestID(), errs.NewErrorRequestInterrupted(ctx.RequestID())))
+		yield(r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())))
 		return
 	}
 
@@ -137,7 +138,6 @@ func (r Runtime) handlePing(ctx Context, yield YieldFrameIterator) {
 	}
 
 	yield(r.encodeFrame(result, nil))
-	return
 }
 
 func (r Runtime) handleBatch(ctx Context, body body.Body, yield YieldFrameIterator) {
@@ -194,8 +194,8 @@ func (r Runtime) executeBatchParrallel(parent Context, requests []bodies.Request
 
 	ctx := NewContext(c, parent.Login(), parent.RequestID(), parent.IsExternal())
 
-	done := make(chan *builder.BatchResultsBuilder, r.maxGoroutinePerBatch)
-	queue := make(chan int, r.maxGoroutinePerBatch)
+	done := make(chan *builder.BatchResultsBuilder, len(requests))
+	queue := make(chan int, len(requests))
 
 	wg.Go(func() {
 		defer close(queue)
@@ -252,22 +252,26 @@ func (r Runtime) executeBatchParrallel(parent Context, requests []bodies.Request
 }
 
 func (r Runtime) executeRequest(ctx Context, request bodies.Request, interruptAfterError bool, builder *builder.BatchResultsBuilder) *builder.BatchResultsBuilder {
-	if ctx.Err() != nil {
-		return r.handleInterruptionInBatch(ctx, request.Number, errs.NewErrorRequestInterrupted(ctx.RequestID()), builder)
+	if interrupted, tracebackID := ctx.state.current(); interruptAfterError && interrupted {
+		return builder.AddError(request.Number, protocolerrs.NewErrorRequestInterruptedWithTracebackID(ctx.RequestID(), tracebackID))
 	}
 
-	if interruptAfterError && ctx.state.interruptNext {
-		return builder.AddError(request.Number, errs.NewErrorRequestInterruptedWithTracebackID(ctx.RequestID(), ctx.state.withTracebackID))
+	if ctx.Err() != nil {
+		return r.handleInterruptionInBatch(ctx, request.Number, protocolerrs.NewErrorRequestInterrupted(ctx.RequestID()), builder)
 	}
 
 	switch body := request.Body.(type) {
 	case bodies.Read:
 		result, err := r.handlerRead(ctx, fields.Key(body))
 		if ctx.Err() != nil {
-			err = errs.NewErrorRequestInterrupted(ctx.RequestID())
+			err = protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())
 		}
 		if err != nil {
 			return r.handleInterruptionInBatch(ctx, request.Number, err, builder)
+		}
+
+		if result == nil {
+			return r.handleInterruptionInBatch(ctx, request.Number, protocolerrs.NewErrorNotFound(fields.Key(body)), builder)
 		}
 
 		return builder.AddRead(request.Number, result)
@@ -275,7 +279,7 @@ func (r Runtime) executeRequest(ctx Context, request bodies.Request, interruptAf
 	case bodies.Write:
 		err := r.handlerWrite(ctx, body.Key, body.Value)
 		if ctx.Err() != nil {
-			err = errs.NewErrorRequestInterrupted(ctx.RequestID())
+			err = protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())
 		}
 		if err != nil {
 			return r.handleInterruptionInBatch(ctx, request.Number, err, builder)
@@ -286,7 +290,7 @@ func (r Runtime) executeRequest(ctx Context, request bodies.Request, interruptAf
 	case bodies.Delete:
 		err := r.handlerDelete(ctx, fields.Key(body))
 		if ctx.Err() != nil {
-			err = errs.NewErrorRequestInterrupted(ctx.RequestID())
+			err = protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())
 		}
 		if err != nil {
 			return r.handleInterruptionInBatch(ctx, request.Number, err, builder)
@@ -298,7 +302,7 @@ func (r Runtime) executeRequest(ctx Context, request bodies.Request, interruptAf
 	return r.handleInterruptionInBatch(
 		ctx,
 		request.Number,
-		errs.NewErrorUnexpectedCommandInBatch(request.Body.Command(), request.Number),
+		protocolerrs.NewErrorUnexpectedCommandInBatch(request.Body.Command(), request.Number),
 		builder,
 	)
 }

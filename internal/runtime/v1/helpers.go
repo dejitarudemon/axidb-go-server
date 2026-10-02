@@ -49,8 +49,8 @@ func (r Runtime) toProtocolError(e error) err.ProtocolError {
 
 // writeErrAnswer encodes an error answer for requestID.
 // cause is sent as-is when it is already a protocol error; otherwise it becomes
-// an internal error. An encoding failure is returned to the caller and is not
-// wrapped in another answer.
+// an internal error. An encoding failure is returned as [errs.ErrCloseConnection]
+// and is not wrapped in another answer.
 func (r Runtime) writeErrAnswer(requestID fields.RequestID, cause error) ([]byte, error) {
 	pe := r.toProtocolError(cause)
 

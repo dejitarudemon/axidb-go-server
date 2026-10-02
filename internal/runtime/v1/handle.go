@@ -17,15 +17,30 @@ import (
 // answer. A nil error means the caller writes the bytes and keeps the connection.
 // An error for which errors.Is(err, [errs.ErrCloseConnection]) is true means
 // the connection with this client must be closed. The caller does not keep
-// reading frames.
+// reading frames. An error answer that cannot be encoded is yielded this way.
 // An error for which errors.Is(err, [errs.ErrLogAndIgnore]) is true means
 // the frame was consumed: the caller logs the error, writes nothing, and
 // keeps the connection.
+// Any other yielded error is a batch answer that could not be encoded.
 //
 // Read, write, delete, and ping stay registered until their single answer is yielded.
 // A batch stays registered until every answer has been yielded, or until the
-// iteration stops with an error. Stopping the range releases the batch too.
+// iteration stops. Stopping the range releases the batch after parallel workers
+// have finished.
+//
 // A cancelled ctx is answered with [protocolerrs.ErrorRequestInterrupted].
+// When the context is already cancelled, the handler is skipped. A handler
+// cancelled while it runs still runs to completion, and its result is replaced
+// with that error. Inside a batch the same rule applies to each nested command.
+// With interrupt-after-error, a nested command that has not started is answered
+// with RequestInterrupted and the traceback of the first error, and its handler
+// is skipped.
+//
+// A batch that asks for one answer yields a single combined frame after every
+// nested command has finished. Otherwise it yields one frame per nested command.
+// Sequential execution runs those commands in request-number order. Otherwise
+// they run concurrently, up to [config.RuntimeBuilderConfig.MaxGoroutinesPerBatch],
+// and frames are yielded as they finish.
 func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) FrameIterator {
 	return func(yield YieldFrameIterator) {
 		if requestRow == nil {
