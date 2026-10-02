@@ -96,6 +96,7 @@ func (rb *RuntimeBuilder) WithHandlerDelete(handler func(ctx Context, key fields
 
 // WithHandlerAuth sets the handler called to authenticate login with the
 // 32-byte handshake hash. A nil handler is ignored and the current handler is kept.
+// [Runtime.Activate] does not call it when asked to skip authentication.
 //
 // A nil error means the check finished: true means the user is authenticated,
 // false means the user is not. A non-nil error means business logic failed and

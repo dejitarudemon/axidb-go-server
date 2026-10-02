@@ -17,6 +17,8 @@ import (
 // On success it returns the [row.RequestRow] for the login, the protocol versions
 // this runtime accepts, and the encoded handshake answer. source is reported
 // to the client when authentication is rejected.
+// skipAuth skips the auth handler. The frame is still decoded and must be a
+// handshake. A valid handshake then returns the request row.
 // A nil error means the caller writes the bytes and keeps the connection.
 // The request row is nil when those bytes are an error answer.
 // An error for which errors.Is(err, [errs.ErrCloseConnection]) is true means
