@@ -131,3 +131,30 @@ func (c *ConnectionsTable) Terminate(connection net.Conn) {
 
 	delete(c.table, connection)
 }
+
+func (c *ConnectionsTable) Stats() ConnectionsTableStats {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+
+	stats := NewConnectionsTableStats()
+
+	for _, versions := range c.table {
+		stats.ConnectionsTotal++
+
+		for version, table := range versions {
+			stats.ConnectionsPerVersion[version]++
+
+			if table.grant {
+				stats.VersionsGranted++
+			}
+
+			if table.row != nil {
+				stats.VersionsActive++
+				stats.RequestsTotal += table.row.Count()
+				stats.RequestsPerVersion[version] += table.row.Count()
+			}
+		}
+	}
+
+	return stats
+}
