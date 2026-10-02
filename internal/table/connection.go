@@ -1,8 +1,6 @@
 package table
 
 import (
-	"errors"
-	"fmt"
 	"net"
 	"sync"
 
@@ -52,18 +50,18 @@ func NewConnectionsTable() *ConnectionsTable {
 
 // Register records connection.
 //
-// A nil connection returns an error. A connection that is already registered
-// returns an error and stays as it is.
+// A nil connection returns [ErrorNilConnection]. A connection that is already
+// registered returns [ErrorConnectionAlreadyRegistered] and stays as it is.
 func (c *ConnectionsTable) Register(connection net.Conn) error {
 	if connection == nil {
-		return errors.New("expected net.Conn, got nil")
+		return NewErrorNilConnection()
 	}
 
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
 	if _, ok := c.table[connection]; ok {
-		return fmt.Errorf("connection %v is already registered", connection)
+		return NewErrorConnectionAlreadyRegistered(connection)
 	}
 
 	c.table[connection] = newVersionsTable()
@@ -73,20 +71,21 @@ func (c *ConnectionsTable) Register(connection net.Conn) error {
 
 // Grant records versions for a registered connection.
 //
-// A nil connection returns an error. A connection that is not registered
-// returns an error. A version that is already recorded is left unchanged,
+// A nil connection returns [ErrorNilConnection]. A connection that is not
+// registered returns [ErrorConnectionNotRegistered]. A version that is already
+// recorded is left unchanged,
 // including a version that already has a row. Grant with no versions returns
 // nil and changes nothing. Recorded versions stay until [ConnectionsTable.Terminate].
 func (c *ConnectionsTable) Grant(connection net.Conn, versions ...fields.Version) error {
 	if connection == nil {
-		return errors.New("expected net.Conn, got nil")
+		return NewErrorNilConnection()
 	}
 
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
 	if _, ok := c.table[connection]; !ok {
-		return fmt.Errorf("connection %v is not registered", connection)
+		return NewErrorConnectionNotRegistered(connection)
 	}
 
 	for _, version := range versions {
@@ -100,30 +99,32 @@ func (c *ConnectionsTable) Grant(connection net.Conn, versions ...fields.Version
 
 // Activate stores row for a granted version of connection.
 //
-// A nil connection or a nil row returns an error. A connection that is not
-// registered returns an error. A version that is not granted returns an error.
-// A version that already has a row returns an error and keeps the stored row.
+// A nil connection returns [ErrorNilConnection]. A nil row returns
+// [ErrorNilRegistrationRow]. A connection that is not registered returns
+// [ErrorConnectionNotRegistered]. A version that is not granted returns
+// [ErrorVersionNotGranted]. A version that already has a row returns
+// [ErrorVersionAlreadyActive] and keeps the stored row.
 // One connection may have a row for more than one version.
 func (c *ConnectionsTable) Activate(connection net.Conn, version fields.Version, row RegistrationRow) error {
 	if connection == nil {
-		return errors.New("expected net.Conn, got nil")
+		return NewErrorNilConnection()
 	}
 
 	if row == nil {
-		return errors.New("expected RegistrationRow, got nil")
+		return NewErrorNilRegistrationRow()
 	}
 
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
 	if _, ok := c.table[connection]; !ok {
-		return fmt.Errorf("connection %v is not registered", connection)
+		return NewErrorConnectionNotRegistered(connection)
 	}
 
 	if table, ok := c.table[connection][version]; !ok || !table.grant {
-		return fmt.Errorf("version %v for connection %v is not granted", version, connection)
+		return NewErrorVersionNotGranted(version, connection)
 	} else if table.row != nil {
-		return fmt.Errorf("version %v for connection %v is already active", version, connection)
+		return NewErrorVersionAlreadyActive(version, connection)
 	} else {
 		table.row = row
 		c.table[connection][version] = table
@@ -134,25 +135,26 @@ func (c *ConnectionsTable) Activate(connection net.Conn, version fields.Version,
 
 // Get returns the row stored for version on connection.
 //
-// A nil connection returns an error. A connection that is not registered
-// returns an error. A version that is not granted returns an error. A granted
-// version with no row returns an error.
+// A nil connection returns [ErrorNilConnection]. A connection that is not
+// registered returns [ErrorConnectionNotRegistered]. A version that is not
+// granted returns [ErrorVersionNotGranted]. A granted version with no row
+// returns [ErrorVersionNotActivated].
 func (c *ConnectionsTable) Get(connection net.Conn, version fields.Version) (RegistrationRow, error) {
 	if connection == nil {
-		return nil, errors.New("expected net.Conn, got nil")
+		return nil, NewErrorNilConnection()
 	}
 
 	c.mx.RLock()
 	defer c.mx.RUnlock()
 
 	if _, ok := c.table[connection]; !ok {
-		return nil, fmt.Errorf("connection %v is not registered", connection)
+		return nil, NewErrorConnectionNotRegistered(connection)
 	}
 
 	if table, ok := c.table[connection][version]; !ok || !table.grant {
-		return nil, fmt.Errorf("version %v for connection %v is not granted", version, connection)
+		return nil, NewErrorVersionNotGranted(version, connection)
 	} else if table.row == nil {
-		return nil, fmt.Errorf("version %v for connection %v is not activated", version, connection)
+		return nil, NewErrorVersionNotActivated(version, connection)
 	} else {
 		return table.row, nil
 	}
