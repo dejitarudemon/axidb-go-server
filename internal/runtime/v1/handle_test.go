@@ -1575,27 +1575,6 @@ func resultCode(t *testing.T, result bodies.Result) fields.Error {
 	return resultError(t, result).Code()
 }
 
-func resultsByNumber(t *testing.T, results bodies.BatchAnswer) map[fields.RequestNumber]bodies.Result {
-	t.Helper()
-
-	got := make(map[fields.RequestNumber]bodies.Result, len(results))
-	for _, result := range results {
-		got[result.Number] = result
-	}
-
-	return got
-}
-
-func containsKey(keys []string, want string) bool {
-	for _, key := range keys {
-		if key == want {
-			return true
-		}
-	}
-
-	return false
-}
-
 func assertLogAndIgnore[T error](t *testing.T, err error) {
 	t.Helper()
 
