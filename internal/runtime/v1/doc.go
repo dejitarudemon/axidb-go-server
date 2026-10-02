@@ -3,7 +3,7 @@
 // [RuntimeBuilder] assembles a [Runtime] from a [config.RuntimeBuilderConfig]
 // and read, write, delete, and auth handlers. Handlers receive a [Context]
 // with the caller login, the request id, and whether the request is external.
-// [Runtime.Handshake] authenticates the client and returns a [row.RequestRow].
+// [Runtime.Activate] authenticates the client and returns a [row.RequestRow].
 // [Runtime.Handle] reads one frame and yields its encoded answers.
 // Read, write, delete, ping, and batch are handled. A batch yields one frame
 // per nested command as it finishes, or one combined answer when the batch asks
