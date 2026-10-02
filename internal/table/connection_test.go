@@ -1,6 +1,7 @@
 package table
 
 import (
+	"fmt"
 	"net"
 	"strings"
 	"sync"
@@ -384,6 +385,64 @@ func TestConcurrentConnections(t *testing.T) {
 	wg.Wait()
 }
 
+func TestStatsConcurrent(t *testing.T) {
+	table := NewConnectionsTable()
+	const n = 16
+
+	var wg sync.WaitGroup
+	wg.Add(n + 1)
+
+	go func() {
+		defer wg.Done()
+
+		for range 200 {
+			if err := checkStats(table.Stats()); err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	}()
+
+	for i := range n {
+		go func(i int) {
+			defer wg.Done()
+
+			left, right := net.Pipe()
+			defer left.Close()
+			defer right.Close()
+
+			version := fields.Version(i + 1)
+			row := &stubRow{n: i + 1}
+
+			if err := table.Register(left); err != nil {
+				t.Errorf("Register() = %v", err)
+				return
+			}
+			if err := table.Grant(left, version); err != nil {
+				t.Errorf("Grant() = %v", err)
+				return
+			}
+			if err := checkStats(table.Stats()); err != nil {
+				t.Error(err)
+				return
+			}
+			if err := table.Activate(left, version, row); err != nil {
+				t.Errorf("Activate() = %v", err)
+				return
+			}
+			if err := checkStats(table.Stats()); err != nil {
+				t.Error(err)
+				return
+			}
+
+			table.Terminate(left)
+		}(i)
+	}
+
+	wg.Wait()
+	assertStats(t, table.Stats(), stats())
+}
+
 func newConn(t *testing.T) net.Conn {
 	t.Helper()
 
@@ -428,6 +487,31 @@ func assertStats(t *testing.T, got, want ConnectionsTableStats) {
 	if !sameStats(got, want) {
 		t.Fatalf("Stats() = %+v, want %+v", got, want)
 	}
+}
+
+func checkStats(s ConnectionsTableStats) error {
+	granted := 0
+	for _, count := range s.ConnectionsPerVersion {
+		granted += count
+	}
+	if granted != s.VersionsGranted {
+		return fmt.Errorf("VersionsGranted = %d, connections per version sum to %d", s.VersionsGranted, granted)
+	}
+	if s.VersionsActive > s.VersionsGranted {
+		return fmt.Errorf("VersionsActive = %d, VersionsGranted = %d", s.VersionsActive, s.VersionsGranted)
+	}
+
+	requests := 0
+	for version, count := range s.RequestsPerVersion {
+		requests += count
+		if _, ok := s.ConnectionsPerVersion[version]; !ok {
+			return fmt.Errorf("requests recorded for version %d without a connection", version)
+		}
+	}
+	if requests != s.RequestsTotal {
+		return fmt.Errorf("RequestsTotal = %d, per version sum to %d", s.RequestsTotal, requests)
+	}
+	return nil
 }
 
 func sameStats(got, want ConnectionsTableStats) bool {
