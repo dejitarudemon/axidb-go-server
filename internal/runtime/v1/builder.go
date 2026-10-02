@@ -43,7 +43,7 @@ func NewRuntimerBuilder(cfg config.RuntimeBuilderConfig) *RuntimeBuilder {
 
 			pool: &sync.Pool{
 				New: func() any {
-					return buffer.Slice{}
+					return &buffer.Slice{}
 				},
 			},
 		},
