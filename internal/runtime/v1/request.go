@@ -149,7 +149,7 @@ func (r Runtime) handleBatch(ctx Context, body body.Body, yield YieldFrameIterat
 		return
 	}
 
-	r.executeBatchParrallel(ctx, batch.Requests, batch.IsOneAnswer, batch.InterruptAfterError, yield)
+	r.executeBatchParallel(ctx, batch.Requests, batch.IsOneAnswer, batch.InterruptAfterError, yield)
 }
 
 func (r Runtime) executeBatchSequential(ctx Context, requests []bodies.Request, isOneAnswer, interruptAfterError bool, yield YieldFrameIterator) {
@@ -184,7 +184,7 @@ func (r Runtime) executeBatchSequential(ctx Context, requests []bodies.Request, 
 	}
 }
 
-func (r Runtime) executeBatchParrallel(parent Context, requests []bodies.Request, isOneAnswer, interruptAfterError bool, yield YieldFrameIterator) {
+func (r Runtime) executeBatchParallel(parent Context, requests []bodies.Request, isOneAnswer, interruptAfterError bool, yield YieldFrameIterator) {
 	rMainBuilder := builder.NewBatchResultsBuilder()
 	wg := sync.WaitGroup{}
 	defer wg.Wait()
