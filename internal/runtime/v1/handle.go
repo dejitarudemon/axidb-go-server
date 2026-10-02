@@ -3,10 +3,7 @@ package runtime_v1
 import (
 	"bufio"
 	"context"
-	"errors"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/body"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/err"
 	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
@@ -30,7 +27,7 @@ import (
 // iteration stops with an error. Stopping the range releases the batch too.
 // A cancelled ctx is answered with [protocolerrs.ErrorRequestInterrupted].
 func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) FrameIterator {
-	return func(yield yieldFrameIterator) {
+	return func(yield YieldFrameIterator) {
 		if requestRow == nil {
 			yield(nil, errs.CloseConnection(errs.ErrNilRequestRow))
 			return
@@ -73,77 +70,18 @@ func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *r
 			yield(nil, r.handleAnswer(request.Body))
 			return
 
-		case fields.Batch:
+		case fields.Read, fields.Write, fields.Delete, fields.Ping, fields.Batch:
 			if err := requestRow.Register(request.RequestID, true); err != nil {
 				yield(r.writeErrAnswer(request.RequestID, err))
 				return
 			}
 
 			defer requestRow.Terminate(request.RequestID)
-			for result, err := range r.handleBatch(NewContext(ctx, requestRow.Login(), request.RequestID, true), request.Body) {
-				if !yield(result, err) {
-					return
-				}
-			}
-			return
 
-		case fields.Read, fields.Write, fields.Delete, fields.Ping:
-			if err := requestRow.Register(request.RequestID, true); err != nil {
-				yield(r.writeErrAnswer(request.RequestID, err))
-				return
-			}
-
-			defer requestRow.Terminate(request.RequestID)
-			encoded, err := r.handleRequest(NewContext(ctx, requestRow.Login(), request.RequestID, true), request.Body)
-			if ctx.Err() != nil {
-				yield(r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorRequestInterrupted(request.RequestID)))
-				return
-			}
-			yield(encoded, err)
+			r.handleRequest(NewContext(ctx, requestRow.Login(), request.RequestID, true), request.Body, yield)
 			return
 		}
 
 		yield(r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnsupportedCommand(request.Body.Command())))
 	}
-}
-
-// decodeClosesConnection reports a failure that leaves the stream unusable.
-// Body-limit and unsupported-compression errors are returned before the body
-// is read, so the next bytes are no longer a frame boundary. A checksum
-// mismatch is answered to the client: that body has already been consumed.
-func decodeClosesConnection(e error) bool {
-	if _, ok := errors.AsType[err.DecodeError](e); ok {
-		return true
-	}
-
-	if _, ok := errors.AsType[err.BrokenFrameError](e); ok {
-		return true
-	}
-
-	if _, ok := errors.AsType[protocolerrs.ErrorBodyLimitIsExceeded](e); ok {
-		return true
-	}
-
-	if _, ok := errors.AsType[protocolerrs.ErrorUnsupportedCompression](e); ok {
-		return true
-	}
-
-	return false
-}
-
-// handleAnswer accepts a ping answer and ignores every other answer.
-//
-// A ping answer returns nil. Any other answer returns [errs.ErrLogAndIgnore]:
-// the caller logs the error, writes nothing, and keeps the connection.
-func (r Runtime) handleAnswer(b body.Body) error {
-	a, ok := b.(body.Answer)
-	if !ok {
-		return errs.LogAndIgnore(answer.NewErrorUnexpectedAnswer(b.Command()))
-	}
-
-	if a.IsResponseTo() != fields.Ping {
-		return errs.LogAndIgnore(answer.NewErrorUnexpectedAnswer(a.IsResponseTo()))
-	}
-
-	return nil
 }

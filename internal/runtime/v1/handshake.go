@@ -66,7 +66,7 @@ func (r Runtime) Handshake(ctx context.Context, reader *bufio.Reader, source []b
 		return nil, nil, answer, err
 	}
 
-	encoded, err := encodeFrame(answer)
+	encoded, err := r.encodeFrame(answer, nil)
 	if err != nil {
 		answer, err := r.writeErrAnswer(request.RequestID, err)
 		return nil, nil, answer, err
