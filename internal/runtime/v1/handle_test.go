@@ -1555,12 +1555,7 @@ func readResult(t *testing.T, result bodies.Result) value.V {
 func resultResponse(t *testing.T, result bodies.Result) fields.Command {
 	t.Helper()
 
-	got, ok := result.Body.(body.Answer)
-	if !ok {
-		t.Fatalf("result %d body = %T, want an answer", result.Number, result.Body)
-	}
-
-	return got.IsResponseTo()
+	return result.IsResponseTo()
 }
 
 func resultError(t *testing.T, result bodies.Result) protocolerr.ProtocolError {
