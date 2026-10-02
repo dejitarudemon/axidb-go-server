@@ -14,4 +14,4 @@ type FrameIterator = iter.Seq2[[]byte, error]
 
 // yieldFrameIterator is the yield function passed to a [FrameIterator].
 // false means the caller stopped ranging and the iterator must return.
-type yieldFrameIterator = func([]byte, error) bool
+type YieldFrameIterator = func([]byte, error) bool
