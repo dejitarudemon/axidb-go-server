@@ -140,6 +140,13 @@ func (r Runtime) handlePing(ctx Context, yield YieldFrameIterator) {
 	yield(r.encodeFrame(result, nil))
 }
 
+// handleBatch yields the answers for a batch body.
+//
+// Sequential execution sorts the nested commands by request number and runs
+// them in that order. Otherwise they run concurrently, up to the runtime
+// parallel-batch limit. A batch that asks for one answer yields a single
+// combined frame after every nested command has finished. Otherwise it yields
+// one frame per nested command.
 func (r Runtime) handleBatch(ctx Context, body body.Body, yield YieldFrameIterator) {
 	batch, _ := body.(bodies.Batch)
 
@@ -152,6 +159,14 @@ func (r Runtime) handleBatch(ctx Context, body body.Body, yield YieldFrameIterat
 	r.executeBatchParallel(ctx, batch.Requests, batch.IsOneAnswer, batch.InterruptAfterError, yield)
 }
 
+// executeBatchSequential runs requests in the order they are passed.
+// [handleBatch] has already sorted them by request number.
+//
+// When isOneAnswer is set, one combined frame is yielded after every command
+// has finished. Otherwise each command is yielded as its own frame before the
+// next command starts. An encoding failure is yielded as that error, and the
+// remaining commands are not run. A yield that returns false stops the batch
+// the same way. interruptAfterError is applied by [executeRequest].
 func (r Runtime) executeBatchSequential(ctx Context, requests []bodies.Request, isOneAnswer, interruptAfterError bool, yield YieldFrameIterator) {
 	rBuilder := builder.NewBatchResultsBuilder()
 
@@ -184,6 +199,14 @@ func (r Runtime) executeBatchSequential(ctx Context, requests []bodies.Request, 
 	}
 }
 
+// executeBatchParallel runs requests concurrently, up to the runtime
+// parallel-batch limit. The workers share a child of parent, so cancellation
+// and the first recorded interruption are visible to every nested command.
+//
+// When isOneAnswer is set, one combined frame is yielded after every command
+// has finished. Otherwise each result is yielded as its own frame as it
+// finishes. An encoding failure is yielded as that error. The call waits for
+// the workers before it returns, including when the iteration stops.
 func (r Runtime) executeBatchParallel(parent Context, requests []bodies.Request, isOneAnswer, interruptAfterError bool, yield YieldFrameIterator) {
 	rMainBuilder := builder.NewBatchResultsBuilder()
 	wg := sync.WaitGroup{}
@@ -251,6 +274,16 @@ func (r Runtime) executeBatchParallel(parent Context, requests []bodies.Request,
 	}
 }
 
+// executeRequest runs one nested command and records its result on builder.
+//
+// When interruptAfterError is set and an interruption is already recorded,
+// the handler is skipped and the result is [protocolerrs.ErrorRequestInterrupted]
+// with that traceback. A context that is already cancelled does the same.
+// A handler cancelled while it runs still runs to completion, and its result
+// is replaced with that error. A nil read value becomes [protocolerrs.ErrorNotFound].
+// Each of these errors is added to builder and registers an interruption; the
+// first traceback is kept. A command other than read, write, or delete is
+// recorded as [protocolerrs.ErrorUnexpectedCommandInBatch].
 func (r Runtime) executeRequest(ctx Context, request bodies.Request, interruptAfterError bool, builder *builder.BatchResultsBuilder) *builder.BatchResultsBuilder {
 	if interrupted, tracebackID := ctx.state.current(); interruptAfterError && interrupted {
 		return builder.AddError(request.Number, protocolerrs.NewErrorRequestInterruptedWithTracebackID(ctx.RequestID(), tracebackID))

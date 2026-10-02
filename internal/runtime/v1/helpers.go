@@ -67,20 +67,25 @@ func (r Runtime) writeErrAnswer(requestID fields.RequestID, cause error) ([]byte
 	return encoded, nil
 }
 
+// encodeFrame encodes frame with compressor, using a buffer from the runtime
+// pool, and returns a copy of the bytes. The buffer goes back to the pool.
+// An encode failure is returned as that error.
 func (r Runtime) encodeFrame(frame frame.Frame, compressor compressor.Compressor) ([]byte, error) {
-	buf := r.pool.Get().(buffer.Slice)
+	buf := r.pool.Get().(*buffer.Slice)
 	buf.Preallocate(frame.Size())
 	buf.Clean()
 
 	defer r.pool.Put(buf)
 
-	if err := frame.Encode(&buf, compressor); err != nil {
+	if err := frame.Encode(buf, compressor); err != nil {
 		return nil, err
 	}
 
 	return buf.Bytes(), nil
 }
 
+// encodeBatchResult builds a batch answer for requestID from rBuilder and
+// encodes it with compressor. A build or encode failure is returned as that error.
 func (r Runtime) encodeBatchResult(requestID fields.RequestID, rBuilder *builder.BatchResultsBuilder, compressor compressor.Compressor) ([]byte, error) {
 	frame, err := builder.NewFrameBuilder(r.limit).NewBatchAnswer(requestID, *rBuilder)
 	if err != nil {
@@ -91,6 +96,11 @@ func (r Runtime) encodeBatchResult(requestID fields.RequestID, rBuilder *builder
 	return r.encodeFrame(frame, compressor)
 }
 
+// handleInterruptionInBatch records err as the result of nested command number.
+//
+// A cancelled context replaces err with [protocolerrs.ErrorRequestInterrupted].
+// The error is converted with [Runtime.toProtocolError], its traceback is
+// registered when none is recorded yet, and the protocol error is added to builder.
 func (r Runtime) handleInterruptionInBatch(ctx Context, number fields.RequestNumber, err error, builder *builder.BatchResultsBuilder) *builder.BatchResultsBuilder {
 	if ctx.Err() != nil {
 		err = protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())
