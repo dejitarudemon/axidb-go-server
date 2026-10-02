@@ -346,8 +346,8 @@ func TestConcurrentConnections(t *testing.T) {
 			defer wg.Done()
 
 			left, right := net.Pipe()
-			defer left.Close()
-			defer right.Close()
+			defer closeConn(left)
+			defer closeConn(right)
 			conn := left
 
 			version := fields.Version(i + 1)
@@ -408,8 +408,8 @@ func TestStatsConcurrent(t *testing.T) {
 			defer wg.Done()
 
 			left, right := net.Pipe()
-			defer left.Close()
-			defer right.Close()
+			defer closeConn(left)
+			defer closeConn(right)
 
 			version := fields.Version(i + 1)
 			row := &stubRow{n: i + 1}
@@ -443,13 +443,17 @@ func TestStatsConcurrent(t *testing.T) {
 	assertStats(t, table.Stats(), stats())
 }
 
+func closeConn(conn net.Conn) {
+	_ = conn.Close()
+}
+
 func newConn(t *testing.T) net.Conn {
 	t.Helper()
 
 	left, right := net.Pipe()
 	t.Cleanup(func() {
-		left.Close()
-		right.Close()
+		closeConn(left)
+		closeConn(right)
 	})
 	return left
 }
