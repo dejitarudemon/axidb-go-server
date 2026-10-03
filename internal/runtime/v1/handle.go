@@ -1,20 +1,21 @@
 package runtime_v1
 
 import (
-	"bufio"
 	"context"
 
 	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/answer"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
 )
 
-// Handle reads one frame from reader and returns an iterator of encoded answers.
+// Handle returns an iterator of encoded answers for an already decoded request.
 //
-// The frame is read when the caller ranges over the iterator. Each yield is one
-// answer. A nil error means the caller writes the bytes and keeps the connection.
+// The caller must decode the frame first, typically with [Runtime.Decode].
+// Each yield is one answer. A nil error means the caller writes the bytes and
+// keeps the connection.
 // An error for which errors.Is(err, [errs.ErrCloseConnection]) is true means
 // the connection with this client must be closed. The caller does not keep
 // reading frames. An error answer that cannot be encoded is yielded this way.
@@ -41,21 +42,10 @@ import (
 // Sequential execution runs those commands in request-number order. Otherwise
 // they run concurrently, up to [config.RuntimeBuilderConfig.MaxGoroutinesPerBatch],
 // and frames are yielded as they finish.
-func (r Runtime) Handle(ctx context.Context, reader *bufio.Reader, requestRow *row.RequestRow) FrameIterator {
+func (r Runtime) Handle(ctx context.Context, request frame.Frame, requestRow *row.RequestRow) FrameIterator {
 	return func(yield YieldFrameIterator) {
 		if requestRow == nil {
 			yield(nil, errs.CloseConnection(errs.ErrNilRequestRow))
-			return
-		}
-
-		request, err := r.decoder.DecodeFrame(reader)
-		if err != nil {
-			if decodeClosesConnection(err) {
-				yield(nil, errs.CloseConnection(err))
-				return
-			}
-
-			yield(r.writeErrAnswer(request.RequestID, err))
 			return
 		}
 

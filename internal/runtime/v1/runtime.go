@@ -13,14 +13,15 @@ import (
 //
 // It holds the request decoder, the allowed protocol versions and compressors,
 // the read, write, delete, and auth handlers, and the limits copied from
-// [config.RuntimeBuilderConfig]. Read, write, delete, ping, and batch are
-// handled. [Runtime.Handle] yields protocol error answers when the frame was
-// fully read. A cancelled context is answered with
-// [protocolerrs.ErrorRequestInterrupted]. A yielded [errs.ErrCloseConnection]
-// means the connection with this client must be closed, including when an error
-// answer cannot be encoded. [errs.ErrLogAndIgnore] means the caller must log
-// the failure, write nothing, and keep the connection. A batch answer that
-// cannot be encoded is yielded as that error.
+// [config.RuntimeBuilderConfig]. [Runtime.Decode] reads frames from the stream.
+// [Runtime.Activate] and [Runtime.Handle] take an already decoded frame.
+// Read, write, delete, ping, and batch are handled by Handle. A cancelled
+// context is answered with [protocolerrs.ErrorRequestInterrupted]. A yielded
+// [errs.ErrCloseConnection] means the connection with this client must be
+// closed, including when an error answer cannot be encoded.
+// [errs.ErrLogAndIgnore] means the caller must log the failure, write nothing,
+// and keep the connection. A batch answer that cannot be encoded is yielded as
+// that error.
 type Runtime struct {
 	decoder decoder.Decoder
 
