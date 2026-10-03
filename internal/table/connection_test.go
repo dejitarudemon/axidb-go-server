@@ -188,6 +188,116 @@ func TestConnectionsStaySeparate(t *testing.T) {
 	assertNotGranted(t, table, first, 2)
 }
 
+func TestIsRegistered(t *testing.T) {
+	table := NewConnectionsTable()
+	conn := newConn(t)
+
+	if table.IsRegistered(nil) {
+		t.Fatal("IsRegistered(nil) = true, want false")
+	}
+	if table.IsRegistered(conn) {
+		t.Fatal("IsRegistered() before Register = true, want false")
+	}
+
+	if err := table.Register(conn); err != nil {
+		t.Fatalf("Register() = %v", err)
+	}
+	if !table.IsRegistered(conn) {
+		t.Fatal("IsRegistered() after Register = false, want true")
+	}
+
+	table.Terminate(conn)
+	if table.IsRegistered(conn) {
+		t.Fatal("IsRegistered() after Terminate = true, want false")
+	}
+}
+
+func TestClose(t *testing.T) {
+	table := NewConnectionsTable()
+	first := newConn(t)
+	second := newConn(t)
+
+	table.Close()
+	assertStats(t, table.Stats(), stats())
+
+	if err := table.Register(first); err != nil {
+		t.Fatalf("Register(first) = %v", err)
+	}
+	if err := table.Register(second); err != nil {
+		t.Fatalf("Register(second) = %v", err)
+	}
+	if err := table.Grant(first, 1, 2); err != nil {
+		t.Fatalf("Grant(first) = %v", err)
+	}
+	if err := table.Grant(second, 1); err != nil {
+		t.Fatalf("Grant(second) = %v", err)
+	}
+	if err := table.Activate(first, 1, &stubRow{n: 1}); err != nil {
+		t.Fatalf("Activate(first) = %v", err)
+	}
+	if err := table.Activate(second, 1, &stubRow{n: 2}); err != nil {
+		t.Fatalf("Activate(second) = %v", err)
+	}
+
+	table.Close()
+
+	if table.IsRegistered(first) || table.IsRegistered(second) {
+		t.Fatal("connections stay registered after Close")
+	}
+	assertStats(t, table.Stats(), stats())
+
+	err := table.Grant(first, 1)
+	if got := asError[ErrorConnectionNotRegistered](t, err); got.Connection() != first {
+		t.Fatal("Grant() after Close named another connection")
+	}
+
+	if err := table.Register(first); err != nil {
+		t.Fatalf("Register() after Close = %v", err)
+	}
+	if !table.IsRegistered(first) {
+		t.Fatal("IsRegistered() after re-register = false, want true")
+	}
+	assertNotGranted(t, table, first, 1)
+}
+
+func TestTwoActiveVersionsOnOneConnection(t *testing.T) {
+	table := NewConnectionsTable()
+	conn := newConn(t)
+	first := &stubRow{n: 1}
+	second := &stubRow{n: 2}
+
+	if err := table.Register(conn); err != nil {
+		t.Fatalf("Register() = %v", err)
+	}
+	if err := table.Grant(conn, 1, 2); err != nil {
+		t.Fatalf("Grant() = %v", err)
+	}
+	if err := table.Activate(conn, 1, first); err != nil {
+		t.Fatalf("Activate(1) = %v", err)
+	}
+	if err := table.Activate(conn, 2, second); err != nil {
+		t.Fatalf("Activate(2) = %v", err)
+	}
+
+	if got := mustGet(t, table, conn, 1); got != first {
+		t.Fatalf("Get(1) = %#v, want the first row", got)
+	}
+	if got := mustGet(t, table, conn, 2); got != second {
+		t.Fatalf("Get(2) = %#v, want the second row", got)
+	}
+
+	assertStats(t, table.Stats(), stats(func(s *ConnectionsTableStats) {
+		s.ConnectionsActive = 1
+		s.ConnectionsPerVersion[1] = 1
+		s.ConnectionsPerVersion[2] = 1
+		s.VersionsGranted = 2
+		s.VersionsActive = 2
+		s.RequestsActive = 3
+		s.RequestsPerVersion[1] = 1
+		s.RequestsPerVersion[2] = 2
+	}))
+}
+
 func TestTerminate(t *testing.T) {
 	table := NewConnectionsTable()
 	conn := newConn(t)
