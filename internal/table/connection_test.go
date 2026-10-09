@@ -188,6 +188,61 @@ func TestConnectionsStaySeparate(t *testing.T) {
 	assertNotGranted(t, table, first, 2)
 }
 
+func TestMinActiveVersion(t *testing.T) {
+	table := NewConnectionsTable()
+	conn := newConn(t)
+	row1 := &stubRow{n: 1}
+	row3 := &stubRow{n: 3}
+
+	_, _, err := table.MinActiveVersion(nil)
+	assertError[ErrorNilConnection](t, err)
+
+	_, _, err = table.MinActiveVersion(conn)
+	if got := asError[ErrorConnectionNotRegistered](t, err); got.Connection() != conn {
+		t.Fatalf("connection = %v, want %v", got.Connection(), conn)
+	}
+
+	if err := table.Register(conn); err != nil {
+		t.Fatalf("Register() = %v", err)
+	}
+
+	_, _, err = table.MinActiveVersion(conn)
+	if got := asError[ErrorNoActiveVersion](t, err); got.Connection() != conn {
+		t.Fatalf("connection = %v, want %v", got.Connection(), conn)
+	}
+
+	if err := table.Grant(conn, 1, 3); err != nil {
+		t.Fatalf("Grant() = %v", err)
+	}
+
+	_, _, err = table.MinActiveVersion(conn)
+	assertError[ErrorNoActiveVersion](t, err)
+
+	if err := table.Activate(conn, 3, row3); err != nil {
+		t.Fatalf("Activate(3) = %v", err)
+	}
+
+	version, row, err := table.MinActiveVersion(conn)
+	if err != nil {
+		t.Fatalf("MinActiveVersion() = %v", err)
+	}
+	if version != 3 || row != row3 {
+		t.Fatalf("MinActiveVersion() = (%v, %#v), want (3, row3)", version, row)
+	}
+
+	if err := table.Activate(conn, 1, row1); err != nil {
+		t.Fatalf("Activate(1) = %v", err)
+	}
+
+	version, row, err = table.MinActiveVersion(conn)
+	if err != nil {
+		t.Fatalf("MinActiveVersion() after Activate(1) = %v", err)
+	}
+	if version != 1 || row != row1 {
+		t.Fatalf("MinActiveVersion() = (%v, %#v), want (1, row1)", version, row)
+	}
+}
+
 func TestIsRegistered(t *testing.T) {
 	table := NewConnectionsTable()
 	conn := newConn(t)
