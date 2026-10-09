@@ -26,6 +26,11 @@ func (s *Server) handleV1(ctx connContext) (stop bool) {
 		if isTimeout(err) {
 			return s.onReadIdle(ctx)
 		}
+		if isDisconnect(err) {
+			s.info("client disconnected", "source", peer(ctx))
+			s.closeConn(ctx)
+			return true
+		}
 
 		s.respondRuntimeError(ctx, answer, err, "failed to decode frame", "version", versionV1)
 		return errors.Is(err, runtimeerrs.ErrCloseConnection)

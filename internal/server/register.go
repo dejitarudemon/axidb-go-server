@@ -13,6 +13,11 @@ func (s *Server) register(ctx connContext) (stop bool) {
 		if isTimeout(err) {
 			return s.onReadIdle(ctx)
 		}
+		if isDisconnect(err) {
+			s.info("client disconnected", "source", peer(ctx))
+			s.closeConn(ctx)
+			return true
+		}
 
 		s.error("failed to peek a preamble", "source", peer(ctx), "error", err)
 		s.closeConn(ctx)
@@ -28,6 +33,11 @@ func (s *Server) register(ctx connContext) (stop bool) {
 	if _, err := s.decoder.DecodeFrame(ctx.reader); err != nil {
 		if isTimeout(err) {
 			return s.onReadIdle(ctx)
+		}
+		if isDisconnect(err) {
+			s.info("client disconnected", "source", peer(ctx))
+			s.closeConn(ctx)
+			return true
 		}
 
 		s.error("failed to read a hello frame", "source", peer(ctx), "error", err)

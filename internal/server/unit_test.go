@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -14,6 +15,21 @@ import (
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
 	serverconfig "github.com/dejitarudemon/axidb-go-server/internal/server/config"
 )
+
+func TestIsDisconnect(t *testing.T) {
+	if !isDisconnect(io.EOF) {
+		t.Fatal("io.EOF: want true")
+	}
+	if !isDisconnect(io.ErrUnexpectedEOF) {
+		t.Fatal("io.ErrUnexpectedEOF: want true")
+	}
+	if !isDisconnect(fmt.Errorf("reader eof: %w", io.EOF)) {
+		t.Fatal("wrapped io.EOF: want true")
+	}
+	if isDisconnect(errors.New("boom")) {
+		t.Fatal("other error: want false")
+	}
+}
 
 func TestPeerEmptyWhenConnMissing(t *testing.T) {
 	if got := peer(connContext{}); got != "" {

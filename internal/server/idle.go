@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"io"
 	"net"
 	"time"
 
@@ -97,4 +98,10 @@ func (s *Server) onReadIdle(ctx connContext) (closed bool) {
 func isTimeout(err error) bool {
 	var netErr net.Error
 	return errors.As(err, &netErr) && netErr.Timeout()
+}
+
+// isDisconnect reports a clean or mid-frame peer close (EOF / unexpected EOF),
+// including when wrapped by the protocol decoder.
+func isDisconnect(err error) bool {
+	return errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)
 }
