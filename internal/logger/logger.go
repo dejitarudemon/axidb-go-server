@@ -1,4 +1,4 @@
-// Package logger defines the logging interface used by the server.
+// Package logger defines the logging interface used by the server and runtimes.
 //
 // Implementations may forward calls to [log/slog] or any other sink. A nil
 // [Logger] means the caller skips logging.

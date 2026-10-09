@@ -1,8 +1,10 @@
 // Package runtime_v1 is the protocol v1 server runtime.
 //
 // [RuntimeBuilder] assembles a [Runtime] from a [config.RuntimeBuilderConfig]
-// and read, write, delete, and auth handlers. Handlers receive a [Context]
-// with the caller login, the request id, and whether the request is external.
+// and read, write, delete, and auth handlers. An optional [logger.Logger] may be
+// set with [RuntimeBuilder.WithLogger]; a nil logger makes log helpers no-ops.
+// Handlers receive a [Context] with the caller login, the request id, and
+// whether the request is external.
 //
 // [Runtime.Decode] reads one frame from a stream. A decode failure that leaves
 // the stream unusable closes the connection. Other decode failures return an

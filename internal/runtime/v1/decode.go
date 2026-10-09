@@ -18,12 +18,20 @@ func (r *Runtime) Decode(reader *bufio.Reader) (frame.Frame, []byte, error) {
 	request, err := r.decoder.DecodeFrame(reader)
 	if err != nil {
 		if decodeClosesConnection(err) {
+			r.error("failed to decode frame", "error", err, "close_connection", true)
 			return frame.Frame{}, nil, errs.CloseConnection(err)
 		}
 
-		answer, err := r.writeErrAnswer(request.RequestID, err)
+		decodeErr := err
+		answer, err := r.writeErrAnswer(request.RequestID, decodeErr)
+		if err != nil {
+			r.error("failed to encode decode error answer", "request_id", request.RequestID, "error", err, "cause", decodeErr)
+		} else {
+			r.warn("decode error answered to client", "request_id", request.RequestID, "error", decodeErr)
+		}
 		return frame.Frame{}, answer, err
 	}
 
+	r.debug("decoded frame", "request_id", request.RequestID, "command", request.Body.Command())
 	return request, nil, nil
 }

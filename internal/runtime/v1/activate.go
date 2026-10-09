@@ -25,11 +25,13 @@ import (
 // reading frames.
 func (r Runtime) Activate(ctx context.Context, request frame.Frame, source []byte, skipAuth bool) (*row.RequestRow, []fields.Version, []byte, error) {
 	if err := request.IsValid(); err != nil {
+		r.warn("activate rejected invalid frame", "request_id", request.RequestID, "error", err)
 		answer, err := r.writeErrAnswer(request.RequestID, err)
 		return nil, nil, answer, err
 	}
 
 	if request.Body.Command() != fields.Handshake {
+		r.warn("activate expected handshake", "request_id", request.RequestID, "command", request.Body.Command())
 		answer, err := r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnexpectedCommand(request.Body.Command(), fields.Handshake))
 		return nil, nil, answer, err
 	}
@@ -40,9 +42,11 @@ func (r Runtime) Activate(ctx context.Context, request frame.Frame, source []byt
 
 	if !skipAuth {
 		if ok, err := r.handlerAuth(requestCtx, hb.Login, hb.Hash); err != nil {
+			r.error("auth handler failed", "login", hb.Login, "request_id", request.RequestID, "error", err)
 			answer, err := r.writeErrAnswer(request.RequestID, err)
 			return nil, nil, answer, err
 		} else if !ok {
+			r.warn("unauthorized", "login", hb.Login, "request_id", request.RequestID)
 			answer, err := r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnauthorized(source))
 			return nil, nil, answer, err
 		}
@@ -55,15 +59,18 @@ func (r Runtime) Activate(ctx context.Context, request frame.Frame, source []byt
 
 	answer, err := builder.NewFrameBuilder(r.limit).NewHandshakeAnswer(allowedCompressions)
 	if err != nil {
+		r.error("failed to build handshake answer", "login", hb.Login, "request_id", request.RequestID, "error", err)
 		answer, err := r.writeErrAnswer(request.RequestID, err)
 		return nil, nil, answer, err
 	}
 
 	encoded, err := r.encodeFrame(answer, nil)
 	if err != nil {
+		r.error("failed to encode handshake answer", "login", hb.Login, "request_id", request.RequestID, "error", err)
 		answer, err := r.writeErrAnswer(request.RequestID, err)
 		return nil, nil, answer, err
 	}
 
+	r.info("activated", "login", hb.Login, "request_id", request.RequestID, "skip_auth", skipAuth)
 	return row.NewRequestRow(hb.Login, hb.Compressions), r.allowedVersions, encoded, nil
 }

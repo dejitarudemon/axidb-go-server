@@ -7,6 +7,7 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/decoder"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
+	"github.com/dejitarudemon/axidb-go-server/internal/logger"
 )
 
 // Runtime is the v1 server runtime assembled by [RuntimeBuilder].
@@ -33,6 +34,9 @@ type Runtime struct {
 	handlerDelete func(ctx Context, key fields.Key) error
 
 	handlerAuth func(ctx Context, login string, hash [32]byte) (bool, error)
+
+	// logger is optional; a nil logger makes log helpers no-ops.
+	logger logger.Logger
 
 	// maxGoroutinePerBatch is how many nested commands of one parallel batch
 	// may run at once. A sequential batch does not use it.
