@@ -21,9 +21,10 @@ type RuntimeBuilder struct {
 
 // NewRuntimerBuilder returns a builder filled from config.
 //
-// Read, write, delete, and auth handlers start as the package stubs. Replace
-// them with WithHandler* before Build. The runtime frame-size limit is the
-// config body limit, in bytes. The parallel-batch goroutine limit is
+// Read, write, delete, and auth handlers start as package stubs that return
+// the protocol CommandNotImplemented error. Replace them with WithHandler*
+// before Build. The runtime frame-size limit is the config body limit, in
+// bytes. The parallel-batch goroutine limit is
 // [config.RuntimeBuilderConfig.MaxGoroutinesPerBatch].
 func NewRuntimerBuilder(cfg config.RuntimeBuilderConfig) *RuntimeBuilder {
 	return &RuntimeBuilder{
