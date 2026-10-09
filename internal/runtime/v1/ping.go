@@ -21,26 +21,28 @@ func (r Runtime) Ping(requestRow *row.RequestRow) ([]byte, error) {
 		return nil, errs.CloseConnection(errs.ErrNilRequestRow)
 	}
 
+	login := requestRow.Login()
+
 	requestID, err := requestRow.Reserve(true)
 	if err != nil {
-		r.warn("failed to reserve idle ping id", "login", requestRow.Login(), "error", err)
+		r.warn("failed to reserve idle ping id", withLogin(login, 0, "error", err)...)
 		return nil, errs.LogAndIgnore(err)
 	}
 
 	frame, err := builder.NewFrameBuilder(r.limit).NewPing(requestID)
 	if err != nil {
 		requestRow.Terminate(requestID)
-		r.warn("failed to build idle ping", "login", requestRow.Login(), "request_id", requestID, "error", err)
+		r.warn("failed to build idle ping", withLogin(login, requestID, "error", err)...)
 		return nil, errs.LogAndIgnore(err)
 	}
 
 	encoded, err := r.encodeFrame(frame, nil)
 	if err != nil {
 		requestRow.Terminate(requestID)
-		r.warn("failed to encode idle ping", "login", requestRow.Login(), "request_id", requestID, "error", err)
+		r.warn("failed to encode idle ping", withLogin(login, requestID, "error", err)...)
 		return nil, errs.LogAndIgnore(err)
 	}
 
-	r.debug("built idle ping", "login", requestRow.Login(), "request_id", requestID)
+	r.debug("built idle ping", withLogin(login, requestID)...)
 	return encoded, nil
 }

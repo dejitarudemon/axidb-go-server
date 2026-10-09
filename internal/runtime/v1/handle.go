@@ -45,20 +45,22 @@ import (
 func (r Runtime) Handle(ctx context.Context, request frame.Frame, requestRow *row.RequestRow) FrameIterator {
 	return func(yield YieldFrameIterator) {
 		if requestRow == nil {
-			r.error("handle with nil request row", "request_id", request.RequestID)
+			r.error("handle with nil request row", withLogin("", request.RequestID)...)
 			yield(nil, errs.CloseConnection(errs.ErrNilRequestRow))
 			return
 		}
 
+		reqCtx := NewContext(ctx, requestRow.Login(), request.RequestID, true)
+
 		if err := request.IsValid(); err != nil {
-			r.warn("handle rejected invalid frame", "login", requestRow.Login(), "request_id", request.RequestID, "error", err)
+			r.warnWithCtx(reqCtx, "handle rejected invalid frame", "error", err)
 			yield(r.writeErrAnswer(request.RequestID, err))
 			return
 		}
 
 		switch request.Body.Command() {
 		case fields.Handshake:
-			r.warn("unexpected handshake after activate", "login", requestRow.Login(), "request_id", request.RequestID)
+			r.warnWithCtx(reqCtx, "unexpected handshake after activate")
 			yield(r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnexpectedCommand(request.Body.Command(), fields.Read)))
 			return
 
@@ -66,43 +68,43 @@ func (r Runtime) Handle(ctx context.Context, request frame.Frame, requestRow *ro
 			isExternal, ok := requestRow.IsRegistered(request.RequestID)
 			if !ok {
 				err := answer.NewErrorUnregisteredAnswer(request.RequestID)
-				r.warn("ignoring unregistered answer", "login", requestRow.Login(), "request_id", request.RequestID, "error", err)
+				r.warnWithCtx(reqCtx, "ignoring unregistered answer", "error", err)
 				yield(nil, errs.LogAndIgnore(err))
 				return
 			}
 
 			if !isExternal {
 				err := answer.NewErrorNonExternalAnswer(request.RequestID)
-				r.warn("ignoring non-external answer", "login", requestRow.Login(), "request_id", request.RequestID, "error", err)
+				r.warnWithCtx(reqCtx, "ignoring non-external answer", "error", err)
 				yield(nil, errs.LogAndIgnore(err))
 				return
 			}
 
 			defer requestRow.Terminate(request.RequestID)
 			if err := r.handleAnswer(request.Body); err != nil {
-				r.warn("ignoring answer", "login", requestRow.Login(), "request_id", request.RequestID, "error", err)
+				r.warnWithCtx(reqCtx, "ignoring answer", "error", err)
 				yield(nil, err)
 				return
 			}
-			r.debug("accepted ping answer", "login", requestRow.Login(), "request_id", request.RequestID)
+			r.debugWithCtx(reqCtx, "accepted ping answer")
 			yield(nil, nil)
 			return
 
 		case fields.Read, fields.Write, fields.Delete, fields.Ping, fields.Batch:
 			if err := requestRow.Register(request.RequestID, true); err != nil {
-				r.warn("request id conflict", "login", requestRow.Login(), "request_id", request.RequestID, "command", request.Body.Command(), "error", err)
+				r.warnWithCtx(reqCtx, "request id conflict", "command", request.Body.Command(), "error", err)
 				yield(r.writeErrAnswer(request.RequestID, err))
 				return
 			}
 
 			defer requestRow.Terminate(request.RequestID)
 
-			r.debug("handling request", "login", requestRow.Login(), "request_id", request.RequestID, "command", request.Body.Command())
-			r.handleRequest(NewContext(ctx, requestRow.Login(), request.RequestID, true), request.Body, yield)
+			r.debugWithCtx(reqCtx, "handling request", "command", request.Body.Command())
+			r.handleRequest(reqCtx, request.Body, yield)
 			return
 		}
 
-		r.warn("unsupported command", "login", requestRow.Login(), "request_id", request.RequestID, "command", request.Body.Command())
+		r.warnWithCtx(reqCtx, "unsupported command", "command", request.Body.Command())
 		yield(r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnsupportedCommand(request.Body.Command())))
 	}
 }

@@ -24,29 +24,31 @@ import (
 // the connection with this client must be closed. The caller does not keep
 // reading frames.
 func (r Runtime) Activate(ctx context.Context, request frame.Frame, source []byte, skipAuth bool) (*row.RequestRow, []fields.Version, []byte, error) {
+	login := activateLogin(request)
+
 	if err := request.IsValid(); err != nil {
-		r.warn("activate rejected invalid frame", "request_id", request.RequestID, "error", err)
+		r.warn("activate rejected invalid frame", withLogin(login, request.RequestID, "error", err)...)
 		answer, err := r.writeErrAnswer(request.RequestID, err)
 		return nil, nil, answer, err
 	}
 
 	if request.Body.Command() != fields.Handshake {
-		r.warn("activate expected handshake", "request_id", request.RequestID, "command", request.Body.Command())
+		r.warn("activate expected handshake", withLogin(login, request.RequestID, "command", request.Body.Command())...)
 		answer, err := r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnexpectedCommand(request.Body.Command(), fields.Handshake))
 		return nil, nil, answer, err
 	}
 
 	hb, _ := request.Body.(bodies.Handshake)
-
-	requestCtx := NewContext(ctx, hb.Login, request.RequestID, true)
+	login = hb.Login
+	requestCtx := NewContext(ctx, login, request.RequestID, true)
 
 	if !skipAuth {
 		if ok, err := r.handlerAuth(requestCtx, hb.Login, hb.Hash); err != nil {
-			r.error("auth handler failed", "login", hb.Login, "request_id", request.RequestID, "error", err)
+			r.errorWithCtx(requestCtx, "auth handler failed", "error", err)
 			answer, err := r.writeErrAnswer(request.RequestID, err)
 			return nil, nil, answer, err
 		} else if !ok {
-			r.warn("unauthorized", "login", hb.Login, "request_id", request.RequestID)
+			r.warnWithCtx(requestCtx, "unauthorized")
 			answer, err := r.writeErrAnswer(request.RequestID, protocolerrs.NewErrorUnauthorized(source))
 			return nil, nil, answer, err
 		}
@@ -59,18 +61,25 @@ func (r Runtime) Activate(ctx context.Context, request frame.Frame, source []byt
 
 	answer, err := builder.NewFrameBuilder(r.limit).NewHandshakeAnswer(allowedCompressions)
 	if err != nil {
-		r.error("failed to build handshake answer", "login", hb.Login, "request_id", request.RequestID, "error", err)
+		r.errorWithCtx(requestCtx, "failed to build handshake answer", "error", err)
 		answer, err := r.writeErrAnswer(request.RequestID, err)
 		return nil, nil, answer, err
 	}
 
 	encoded, err := r.encodeFrame(answer, nil)
 	if err != nil {
-		r.error("failed to encode handshake answer", "login", hb.Login, "request_id", request.RequestID, "error", err)
+		r.errorWithCtx(requestCtx, "failed to encode handshake answer", "error", err)
 		answer, err := r.writeErrAnswer(request.RequestID, err)
 		return nil, nil, answer, err
 	}
 
-	r.info("activated", "login", hb.Login, "request_id", request.RequestID, "skip_auth", skipAuth)
+	r.infoWithCtx(requestCtx, "activated", "skip_auth", skipAuth)
 	return row.NewRequestRow(hb.Login, hb.Compressions), r.allowedVersions, encoded, nil
+}
+
+func activateLogin(request frame.Frame) string {
+	if hb, ok := request.Body.(bodies.Handshake); ok {
+		return hb.Login
+	}
+	return ""
 }
