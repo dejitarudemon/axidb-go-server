@@ -8,8 +8,9 @@ import (
 
 // Ping encodes a server-initiated ping for requestRow.
 //
-// It reserves a free non-zero request id with [row.RequestRow.Reserve], builds
-// a ping frame, and returns the encoded bytes. The id stays registered until
+// It reserves a free non-zero request id with [row.RequestRow.Reserve] marked
+// external so a client ping answer is accepted by [Runtime.Handle], builds a
+// ping frame, and returns the encoded bytes. The id stays registered until
 // [row.RequestRow.Terminate] runs, typically when the ping answer is handled.
 // A nil requestRow returns [errs.ErrCloseConnection]. A reserve, build, or
 // encode failure returns [errs.ErrLogAndIgnore] after releasing the id when it
@@ -19,7 +20,7 @@ func (r Runtime) Ping(requestRow *row.RequestRow) ([]byte, error) {
 		return nil, errs.CloseConnection(errs.ErrNilRequestRow)
 	}
 
-	requestID, err := requestRow.Reserve(false)
+	requestID, err := requestRow.Reserve(true)
 	if err != nil {
 		return nil, errs.LogAndIgnore(err)
 	}

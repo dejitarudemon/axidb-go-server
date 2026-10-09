@@ -34,8 +34,8 @@ func TestPingEncodesWithAReservedID(t *testing.T) {
 	}
 
 	isExternal, ok := requestRow.IsRegistered(got.RequestID)
-	if !ok || isExternal {
-		t.Fatalf("IsRegistered(%d) = (%v, %v), want (false, true)", got.RequestID, isExternal, ok)
+	if !ok || !isExternal {
+		t.Fatalf("IsRegistered(%d) = (%v, %v), want (true, true)", got.RequestID, isExternal, ok)
 	}
 }
 
