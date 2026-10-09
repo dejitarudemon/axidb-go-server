@@ -225,3 +225,46 @@ func (c *ConnectionsTable) IsRegistered(conn net.Conn) bool {
 	_, ok := c.table[conn]
 	return ok
 }
+
+// MinActiveVersion returns the smallest activated protocol version on
+// connection and its [RegistrationRow].
+//
+// A nil connection returns [ErrorNilConnection]. A connection that is not
+// registered returns [ErrorConnectionNotRegistered]. A registered connection
+// with no activated version returns [ErrorNoActiveVersion].
+func (c *ConnectionsTable) MinActiveVersion(connection net.Conn) (fields.Version, RegistrationRow, error) {
+	if connection == nil {
+		return 0, nil, NewErrorNilConnection()
+	}
+
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+
+	versions, ok := c.table[connection]
+	if !ok {
+		return 0, nil, NewErrorConnectionNotRegistered(connection)
+	}
+
+	var (
+		found   bool
+		minVer  fields.Version
+		minRow  RegistrationRow
+	)
+
+	for version, table := range versions {
+		if table.row == nil {
+			continue
+		}
+		if !found || version < minVer {
+			found = true
+			minVer = version
+			minRow = table.row
+		}
+	}
+
+	if !found {
+		return 0, nil, NewErrorNoActiveVersion(connection)
+	}
+
+	return minVer, minRow, nil
+}
