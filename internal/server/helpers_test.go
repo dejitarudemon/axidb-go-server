@@ -1,0 +1,280 @@
+package server
+
+import (
+	"bufio"
+	"io"
+	"net"
+	"testing"
+	"time"
+
+	v0builder "github.com/dejitarudemon/axidb-go-protocol/v0/builder"
+	v0decoder "github.com/dejitarudemon/axidb-go-protocol/v0/decoder"
+	v0fields "github.com/dejitarudemon/axidb-go-protocol/v0/fields"
+	"github.com/dejitarudemon/axidb-go-protocol/v1/body"
+	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
+	"github.com/dejitarudemon/axidb-go-protocol/v1/buffer"
+	v1builder "github.com/dejitarudemon/axidb-go-protocol/v1/builder"
+	v1decoder "github.com/dejitarudemon/axidb-go-protocol/v1/decoder"
+	v1fields "github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	v1frame "github.com/dejitarudemon/axidb-go-protocol/v1/frame"
+	runtime_v1 "github.com/dejitarudemon/axidb-go-server/internal/runtime/v1"
+	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
+	serverconfig "github.com/dejitarudemon/axidb-go-server/internal/server/config"
+)
+
+const v1TestLimit = 1 << 20
+
+func testConfig(t *testing.T) *serverconfig.ServerConfig {
+	t.Helper()
+	return serverconfig.NewServerConfig().
+		WithNetwork("tcp").
+		WithReadTimeout(200 * time.Millisecond).
+		WithPingInterval(100 * time.Millisecond).
+		WithPingTimeout(300 * time.Millisecond).
+		WithBufferSize(4)
+}
+
+func startTestServer(t *testing.T, cfg *serverconfig.ServerConfig, rt *runtime_v1.Runtime) *Server {
+	t.Helper()
+
+	if cfg == nil {
+		cfg = testConfig(t)
+	}
+
+	s := NewServer(cfg, nil)
+	if rt != nil {
+		if err := s.RegisterV1Runtime(rt); err != nil {
+			t.Fatalf("RegisterV1Runtime() = %v", err)
+		}
+	}
+
+	if err := s.Start("127.0.0.1", 0); err != nil {
+		t.Fatalf("Start() = %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+
+	return s
+}
+
+func testRuntime(t *testing.T) *runtime_v1.Runtime {
+	t.Helper()
+
+	rt := NewRuntimerBuilderForTest(t)
+	return &rt
+}
+
+// NewRuntimerBuilderForTest builds a v1 runtime with accepting auth for server tests.
+func NewRuntimerBuilderForTest(t *testing.T) runtime_v1.Runtime {
+	t.Helper()
+
+	return runtime_v1.NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(v1TestLimit)).
+		WithHandlerAuth(func(runtime_v1.Context, string, [32]byte) (bool, error) {
+			return true, nil
+		}).
+		Build()
+}
+
+func rejectAuthRuntime(t *testing.T) *runtime_v1.Runtime {
+	t.Helper()
+
+	rt := runtime_v1.NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(v1TestLimit)).
+		WithHandlerAuth(func(runtime_v1.Context, string, [32]byte) (bool, error) {
+			return false, nil
+		}).
+		Build()
+	return &rt
+}
+
+type testConn struct {
+	net.Conn
+	r *bufio.Reader
+}
+
+func dialServer(t *testing.T, s *Server) *testConn {
+	t.Helper()
+
+	if s.listener == nil {
+		t.Fatal("server has no listener")
+	}
+
+	conn, err := net.DialTimeout(s.listener.Addr().Network(), s.listener.Addr().String(), time.Second)
+	if err != nil {
+		t.Fatalf("Dial() = %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	return &testConn{Conn: conn, r: bufio.NewReader(conn)}
+}
+
+func encodeV0Hello(t *testing.T, versions []v0fields.Version) []byte {
+	t.Helper()
+
+	frame, err := v0builder.NewFrameBuilder(v0Limit).NewHello(versions)
+	if err != nil {
+		t.Fatalf("NewHello() = %v", err)
+	}
+
+	buf := buffer.Slice{}
+	buf.Preallocate(frame.Size())
+	if err := frame.Encode(&buf); err != nil {
+		t.Fatalf("Encode() = %v", err)
+	}
+	return buf.Bytes()
+}
+
+func writeAll(t *testing.T, w io.Writer, raw []byte) {
+	t.Helper()
+
+	n, err := w.Write(raw)
+	if err != nil {
+		t.Fatalf("Write() = %v", err)
+	}
+	if n != len(raw) {
+		t.Fatalf("Write() wrote %d, want %d", n, len(raw))
+	}
+}
+
+func expectConnClosed(t *testing.T, conn *testConn, wait time.Duration) {
+	t.Helper()
+
+	deadline := time.Now().Add(wait)
+	buf := make([]byte, 4096)
+	chunks := 0
+
+	for time.Now().Before(deadline) {
+		if err := conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond)); err != nil {
+			t.Fatalf("SetReadDeadline() = %v", err)
+		}
+
+		_, err := conn.r.Read(buf)
+		if err != nil {
+			if isTimeout(err) {
+				continue
+			}
+			return
+		}
+		chunks++
+	}
+
+	t.Fatalf("connection still open after %v (%d chunks still arriving)", wait, chunks)
+}
+
+func readHelloAnswer(t *testing.T, conn *testConn) {
+	t.Helper()
+
+	if err := conn.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		t.Fatalf("SetReadDeadline() = %v", err)
+	}
+
+	dec := v0decoder.NewDecoder()
+	if _, err := dec.DecodeFrame(conn.r); err != nil {
+		t.Fatalf("hello DecodeFrame() = %v", err)
+	}
+}
+
+func encodeV1Frame(t *testing.T, f v1frame.Frame) []byte {
+	t.Helper()
+
+	var buf buffer.Slice
+	if err := f.Encode(&buf, nil); err != nil {
+		t.Fatalf("v1 Encode() = %v", err)
+	}
+	return buf.Bytes()
+}
+
+func encodeHandshake(t *testing.T, login string, hash [32]byte) []byte {
+	t.Helper()
+
+	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewHandshake(login, hash, nil)
+	if err != nil {
+		t.Fatalf("NewHandshake() = %v", err)
+	}
+	return encodeV1Frame(t, f)
+}
+
+func encodeClientPing(t *testing.T, id v1fields.RequestID) []byte {
+	t.Helper()
+
+	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewPing(id)
+	if err != nil {
+		t.Fatalf("NewPing() = %v", err)
+	}
+	return encodeV1Frame(t, f)
+}
+
+func encodePingAnswer(t *testing.T, id v1fields.RequestID) []byte {
+	t.Helper()
+
+	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewPingAnswer(id)
+	if err != nil {
+		t.Fatalf("NewPingAnswer() = %v", err)
+	}
+	return encodeV1Frame(t, f)
+}
+
+func encodeRead(t *testing.T, id v1fields.RequestID, key string) []byte {
+	t.Helper()
+
+	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewRead(id, v1fields.Key(key))
+	if err != nil {
+		t.Fatalf("NewRead() = %v", err)
+	}
+	return encodeV1Frame(t, f)
+}
+
+func readV1Frame(t *testing.T, conn *testConn, d time.Duration) v1frame.Frame {
+	t.Helper()
+
+	if err := conn.SetReadDeadline(time.Now().Add(d)); err != nil {
+		t.Fatalf("SetReadDeadline() = %v", err)
+	}
+
+	got, err := v1decoder.NewDecoder(v1TestLimit, nil).DecodeFrame(conn.r)
+	if err != nil {
+		t.Fatalf("DecodeFrame() = %v", err)
+	}
+	return got
+}
+
+// readV1IgnoringServerPings reads the next non-Ping frame.
+// Server idle Pings are skipped so tests can sync on application traffic.
+func readV1IgnoringServerPings(t *testing.T, conn *testConn, d time.Duration) v1frame.Frame {
+	t.Helper()
+
+	deadline := time.Now().Add(d)
+	for time.Now().Before(deadline) {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+		got := readV1Frame(t, conn, remaining)
+		if _, ok := got.Body.(bodies.Ping); ok {
+			continue
+		}
+		return got
+	}
+	t.Fatal("timed out waiting for a non-ping frame")
+	return v1frame.Frame{}
+}
+
+func registerAndActivate(t *testing.T, conn *testConn) {
+	t.Helper()
+
+	writeAll(t, conn, encodeV0Hello(t, []v0fields.Version{1}))
+	readHelloAnswer(t, conn)
+
+	writeAll(t, conn, encodeHandshake(t, "user", [32]byte{1}))
+	got := readV1Frame(t, conn, time.Second)
+	if _, ok := got.Body.(bodies.HandshakeAnswer); !ok {
+		t.Fatalf("activate body = %T, want HandshakeAnswer", got.Body)
+	}
+}
+
+func errorAnswerCode(t *testing.T, b body.Body) v1fields.Error {
+	t.Helper()
+
+	ans, ok := b.(bodies.ErrorAnswer)
+	if !ok {
+		t.Fatalf("body = %T, want ErrorAnswer", b)
+	}
+	return ans.Err.Code()
+}
