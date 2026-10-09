@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
+	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
 )
@@ -98,6 +99,31 @@ func TestLoggerAddsTimeField(t *testing.T) {
 	}
 	if args[2] != "k" || args[3] != 1 {
 		t.Fatalf("args = %#v", args)
+	}
+}
+
+func TestInfoWithCtxAddsLoginAndRequestID(t *testing.T) {
+	var args []any
+	log := loggerSpy{onInfo: func(_ string, a ...any) { args = a }}
+	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig()).WithLogger(log).Build()
+
+	ctx := NewContext(context.Background(), "alice", 7, true)
+	rt.infoWithCtx(ctx, "read", "key", "k")
+
+	if len(args) < 8 {
+		t.Fatalf("args = %#v, want time/login/request_id/key", args)
+	}
+	if args[0] != "time" {
+		t.Fatalf("args[0] = %v, want time", args[0])
+	}
+	if args[2] != "login" || args[3] != "alice" {
+		t.Fatalf("login = %#v", args[2:4])
+	}
+	if args[4] != "request_id" || args[5] != fields.RequestID(7) {
+		t.Fatalf("request_id = %#v", args[4:6])
+	}
+	if args[6] != "key" || args[7] != "k" {
+		t.Fatalf("key = %#v", args[6:8])
 	}
 }
 
