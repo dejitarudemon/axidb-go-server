@@ -14,7 +14,11 @@ import (
 )
 
 func TestActivateAcceptsTheClient(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
+		WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
+			return true, nil
+		}).
+		Build()
 
 	requestRow, versions, answer, err := rt.Activate(context.Background(), handshakeRequest(), []byte("peer"), false)
 	if err != nil {

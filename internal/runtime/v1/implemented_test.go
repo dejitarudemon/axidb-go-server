@@ -2,8 +2,10 @@ package runtime_v1
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 )
 
@@ -22,10 +24,9 @@ func TestDefaultHandlerRead(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := defaultHandlerRead(tt.ctx, tt.key)
-			if err != nil {
-				t.Fatalf("error = %v, want nil", err)
+			if _, ok := errors.AsType[protocolerrs.ErrorCommandNotImplemented](err); !ok {
+				t.Fatalf("error = %T(%v), want ErrorCommandNotImplemented", err, err)
 			}
-
 			if got != nil {
 				t.Fatalf("value = %v, want nil", got)
 			}
@@ -45,8 +46,9 @@ func TestDefaultHandlerWrite(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := defaultHandlerWrite(Context{}, tt.key, nil); err != nil {
-				t.Fatalf("error = %v, want nil", err)
+			err := defaultHandlerWrite(Context{}, tt.key, nil)
+			if _, ok := errors.AsType[protocolerrs.ErrorCommandNotImplemented](err); !ok {
+				t.Fatalf("error = %T(%v), want ErrorCommandNotImplemented", err, err)
 			}
 		})
 	}
@@ -64,8 +66,9 @@ func TestDefaultHandlerDelete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := defaultHandlerDelete(Context{}, tt.key); err != nil {
-				t.Fatalf("error = %v, want nil", err)
+			err := defaultHandlerDelete(Context{}, tt.key)
+			if _, ok := errors.AsType[protocolerrs.ErrorCommandNotImplemented](err); !ok {
+				t.Fatalf("error = %T(%v), want ErrorCommandNotImplemented", err, err)
 			}
 		})
 	}
@@ -85,12 +88,11 @@ func TestDefaultHandlerAuth(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ok, err := defaultHandlerAuth(Context{}, tt.login, tt.hash)
-			if err != nil {
-				t.Fatalf("error = %v, want nil", err)
+			if _, asOK := errors.AsType[protocolerrs.ErrorCommandNotImplemented](err); !asOK {
+				t.Fatalf("error = %T(%v), want ErrorCommandNotImplemented", err, err)
 			}
-
-			if !ok {
-				t.Fatal("authenticated = false, want true")
+			if ok {
+				t.Fatal("authenticated = true, want false")
 			}
 		})
 	}
