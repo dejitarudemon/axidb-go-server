@@ -28,7 +28,7 @@ import (
 func TestHandleNilRowClosesConnection(t *testing.T) {
 	rt := handleRuntime(t)
 
-	_, err := runHandle(t, rt.Runtime, context.Background(), nil, mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, nil))
+	_, err := runHandle(t, rt.Runtime, context.Background(), nil, frame.Frame{RequestID: 1, Body: bodies.Ping{}})
 	if !errors.Is(err, errs.ErrCloseConnection) || !errors.Is(err, errs.ErrNilRequestRow) {
 		t.Fatalf("error = %v, want close connection and nil row", err)
 	}
@@ -39,10 +39,10 @@ func TestHandleReadWriteDeleteAndPing(t *testing.T) {
 	rt.data["k"] = values.String("v")
 	requestRow := row.NewRequestRow("user", nil)
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, frame.Frame{
 		RequestID: 7,
 		Body:      bodies.Read("k"),
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("read error = %v", err)
 	}
@@ -59,10 +59,10 @@ func TestHandleReadWriteDeleteAndPing(t *testing.T) {
 		t.Fatalf("read call = %+v", rt.calls)
 	}
 
-	frames, err = runHandle(t, rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+	frames, err = runHandle(t, rt.Runtime, context.Background(), requestRow, frame.Frame{
 		RequestID: 2,
 		Body:      bodies.Write{Key: fields.Key("k"), Value: values.String("n")},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("write error = %v", err)
 	}
@@ -75,10 +75,10 @@ func TestHandleReadWriteDeleteAndPing(t *testing.T) {
 		t.Errorf("stored = %q, want n", rt.data["k"])
 	}
 
-	frames, err = runHandle(t, rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+	frames, err = runHandle(t, rt.Runtime, context.Background(), requestRow, frame.Frame{
 		RequestID: 3,
 		Body:      bodies.Delete("k"),
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("delete error = %v", err)
 	}
@@ -91,10 +91,10 @@ func TestHandleReadWriteDeleteAndPing(t *testing.T) {
 		t.Errorf("key k is still stored")
 	}
 
-	frames, err = runHandle(t, rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+	frames, err = runHandle(t, rt.Runtime, context.Background(), requestRow, frame.Frame{
 		RequestID: 4,
 		Body:      bodies.Ping{},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("ping error = %v", err)
 	}
@@ -107,10 +107,10 @@ func TestHandleReadWriteDeleteAndPing(t *testing.T) {
 func TestHandleMissingKeyIsNotFound(t *testing.T) {
 	rt := handleRuntime(t)
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 1,
 		Body:      bodies.Read("missing"),
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -130,10 +130,10 @@ func TestHandleHandlerErrorIsInternal(t *testing.T) {
 		bodies.Write{Key: fields.Key("k"), Value: values.String("v")},
 		bodies.Delete("k"),
 	} {
-		frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+		frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, frame.Frame{
 			RequestID: 1,
 			Body:      body,
-		}, nil))
+		})
 		if err != nil {
 			t.Fatalf("%v error = %v", body.Command(), err)
 		}
@@ -145,10 +145,10 @@ func TestHandleHandlerErrorIsInternal(t *testing.T) {
 func TestHandleWriteRejectsNonString(t *testing.T) {
 	rt := handleRuntime(t)
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 1,
 		Body:      bodies.Write{Key: fields.Key("k"), Value: values.Int(1)},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -166,10 +166,10 @@ func TestHandleDuplicateRequest(t *testing.T) {
 		t.Fatalf("register = %v", err)
 	}
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, frame.Frame{
 		RequestID: 1,
 		Body:      bodies.Ping{},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -195,10 +195,10 @@ func TestHandleAnswers(t *testing.T) {
 			t.Fatalf("register = %v", err)
 		}
 
-		raw, err := runHandleRaw(rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+		raw, err := runHandleRaw(rt.Runtime, context.Background(), requestRow, frame.Frame{
 			RequestID: 1,
 			Body:      bodies.PingAnswer{},
-		}, nil))
+		})
 		if err != nil {
 			t.Fatalf("error = %v", err)
 		}
@@ -214,10 +214,10 @@ func TestHandleAnswers(t *testing.T) {
 
 	t.Run("unregistered", func(t *testing.T) {
 		requestRow := row.NewRequestRow("user", nil)
-		_, err := runHandleRaw(rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+		_, err := runHandleRaw(rt.Runtime, context.Background(), requestRow, frame.Frame{
 			RequestID: 1,
 			Body:      bodies.PingAnswer{},
-		}, nil))
+		})
 		assertLogAndIgnore[answer.ErrorUnregisteredAnswer](t, err)
 		if requestRow.Count() != 0 {
 			t.Errorf("registered = %d, want 0", requestRow.Count())
@@ -230,10 +230,10 @@ func TestHandleAnswers(t *testing.T) {
 			t.Fatalf("register = %v", err)
 		}
 
-		_, err := runHandleRaw(rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+		_, err := runHandleRaw(rt.Runtime, context.Background(), requestRow, frame.Frame{
 			RequestID: 1,
 			Body:      bodies.PingAnswer{},
-		}, nil))
+		})
 		assertLogAndIgnore[answer.ErrorNonExternalAnswer](t, err)
 
 		external, ok := requestRow.IsRegistered(1)
@@ -257,10 +257,10 @@ func TestHandleAnswers(t *testing.T) {
 				t.Fatalf("register = %v", err)
 			}
 
-			_, err := runHandleRaw(rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+			_, err := runHandleRaw(rt.Runtime, context.Background(), requestRow, frame.Frame{
 				RequestID: 1,
 				Body:      body,
-			}, nil))
+			})
 			assertLogAndIgnore[answer.ErrorUnexpectedAnswer](t, err)
 			if requestRow.Count() != 0 {
 				t.Errorf("registered = %d, want 0", requestRow.Count())
@@ -271,10 +271,10 @@ func TestHandleAnswers(t *testing.T) {
 
 func TestHandleHandshakeIsUnexpected(t *testing.T) {
 	rt := handleRuntime(t)
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 1,
 		Body:      bodies.NewHandshake("user", [32]byte{}, nil),
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -296,10 +296,10 @@ func TestHandleInvalidBodiesAreInternalErrors(t *testing.T) {
 		bodies.Batch{Requests: []bodies.Request{{Number: 1, Body: bodies.Ping{}}}},
 	}
 	for _, body := range cases {
-		frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+		frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, frame.Frame{
 			RequestID: 1,
 			Body:      body,
-		}, nil))
+		})
 		if err != nil {
 			t.Fatalf("%T error = %v", body, err)
 		}
@@ -315,59 +315,13 @@ func TestHandleInvalidBodiesAreInternalErrors(t *testing.T) {
 	}
 }
 
-func TestHandleBodyLimitClosesConnection(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(0)).Build()
-	_, err := runHandle(t, rt, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
-		RequestID: 1,
-		Body:      bodies.Read("x"),
-	}, nil))
-	assertClose(t, err)
-	if _, ok := errors.AsType[protocolerrs.ErrorBodyLimitIsExceeded](err); !ok {
-		t.Fatalf("error = %v, want body limit exceeded", err)
-	}
-}
-
-func TestHandleShortReadClosesConnection(t *testing.T) {
-	rt := handleRuntime(t)
-	_, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), []byte{0x01, 0x02})
-	assertClose(t, err)
-	if _, ok := errors.AsType[protocolerr.DecodeError](err); !ok {
-		t.Fatalf("error = %v, want decode error", err)
-	}
-}
-
-func TestHandleUnsupportedCompressionClosesConnection(t *testing.T) {
-	rt := handleRuntime(t)
-	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, nil)
-	raw[8] = 9
-
-	_, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), raw)
-	assertClose(t, err)
-	if _, ok := errors.AsType[protocolerrs.ErrorUnsupportedCompression](err); !ok {
-		t.Fatalf("error = %v, want unsupported compression", err)
-	}
-}
-
-func TestHandleChecksumMismatchIsAnAnswer(t *testing.T) {
-	rt := handleRuntime(t)
-	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, nil)
-	raw[len(raw)-1] ^= 0xff
-
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), raw)
-	if err != nil {
-		t.Fatalf("error = %v, want an error answer", err)
-	}
-
-	assertErrorCode(t, frames[0], fields.MismatchedChecksum)
-}
-
 func TestHandleZeroRequestIDIsInternalError(t *testing.T) {
 	rt := handleRuntime(t)
 	requestRow := row.NewRequestRow("user", nil)
-	frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, frame.Frame{
 		RequestID: 0,
 		Body:      bodies.Ping{},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -394,10 +348,10 @@ func TestHandleCancelledContextIsRequestInterrupted(t *testing.T) {
 		bodies.Batch{Requests: []bodies.Request{{Number: 1, Body: bodies.Read("k")}}},
 	}
 	for i, command := range commands {
-		frames, err := runHandle(t, rt.Runtime, parent, requestRow, mustEncodeFrame(t, frame.Frame{
+		frames, err := runHandle(t, rt.Runtime, parent, requestRow, frame.Frame{
 			RequestID: fields.RequestID(i + 1),
 			Body:      command,
-		}, nil))
+		})
 		if err != nil {
 			t.Fatalf("%v error = %v", command.Command(), err)
 		}
@@ -428,10 +382,10 @@ func TestHandleCancelDuringHandlerIsRequestInterrupted(t *testing.T) {
 		rt.data["k"] = values.String("v")
 		rt.onCall = func(handlerCall) { cancel() }
 
-		frames, err := runHandle(t, rt.Runtime, parent, row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+		frames, err := runHandle(t, rt.Runtime, parent, row.NewRequestRow("user", nil), frame.Frame{
 			RequestID: 1,
 			Body:      bodies.Read("k"),
-		}, nil))
+		})
 		if err != nil {
 			t.Fatalf("error = %v", err)
 		}
@@ -447,10 +401,10 @@ func TestHandleCancelDuringHandlerIsRequestInterrupted(t *testing.T) {
 		rt := handleRuntime(t)
 		rt.onCall = func(handlerCall) { cancel() }
 
-		frames, err := runHandle(t, rt.Runtime, parent, row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+		frames, err := runHandle(t, rt.Runtime, parent, row.NewRequestRow("user", nil), frame.Frame{
 			RequestID: 1,
 			Body:      bodies.Write{Key: fields.Key("k"), Value: values.String("n")},
-		}, nil))
+		})
 		if err != nil {
 			t.Fatalf("error = %v", err)
 		}
@@ -467,10 +421,10 @@ func TestHandleCancelDuringHandlerIsRequestInterrupted(t *testing.T) {
 		rt.data["k"] = values.String("v")
 		rt.onCall = func(handlerCall) { cancel() }
 
-		frames, err := runHandle(t, rt.Runtime, parent, row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+		frames, err := runHandle(t, rt.Runtime, parent, row.NewRequestRow("user", nil), frame.Frame{
 			RequestID: 1,
 			Body:      bodies.Delete("k"),
-		}, nil))
+		})
 		if err != nil {
 			t.Fatalf("error = %v", err)
 		}
@@ -486,7 +440,7 @@ func TestHandleSequentialBatch(t *testing.T) {
 	rt := handleRuntime(t)
 	rt.data["a"] = values.String("A")
 	requestRow := row.NewRequestRow("user", nil)
-	raw := mustEncodeFrame(t, frame.Frame{
+	request := frame.Frame{
 		RequestID: 9,
 		Body: bodies.Batch{
 			IsSequentialExecution: true,
@@ -496,10 +450,10 @@ func TestHandleSequentialBatch(t *testing.T) {
 				{Number: 3, Body: bodies.Write{Key: fields.Key("b"), Value: values.String("B")}},
 			},
 		},
-	}, nil)
+	}
 
 	var frames []frame.Frame
-	for encoded, err := range rt.Handle(context.Background(), bufio.NewReader(bytes.NewReader(raw)), requestRow) {
+	for encoded, err := range rt.Handle(context.Background(), request, requestRow) {
 		if err != nil {
 			t.Fatalf("error = %v", err)
 		}
@@ -555,7 +509,7 @@ func TestHandleSequentialBatchOneAnswer(t *testing.T) {
 	rt := handleRuntime(t)
 	rt.data["a"] = values.String("A")
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 4,
 		Body: bodies.Batch{
 			IsSequentialExecution: true,
@@ -565,7 +519,7 @@ func TestHandleSequentialBatchOneAnswer(t *testing.T) {
 				{Number: 1, Body: bodies.Read("a")},
 			},
 		},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -591,7 +545,7 @@ func TestHandleSequentialBatchOneAnswer(t *testing.T) {
 func TestHandleSequentialInterruptAfterError(t *testing.T) {
 	rt := handleRuntime(t)
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 1,
 		Body: bodies.Batch{
 			IsSequentialExecution: true,
@@ -602,7 +556,7 @@ func TestHandleSequentialInterruptAfterError(t *testing.T) {
 				{Number: 2, Body: bodies.Write{Key: fields.Key("b"), Value: values.String("B")}},
 			},
 		},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -632,7 +586,7 @@ func TestHandleSequentialInterruptAfterError(t *testing.T) {
 func TestHandleSequentialContinuesAfterError(t *testing.T) {
 	rt := handleRuntime(t)
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 1,
 		Body: bodies.Batch{
 			IsSequentialExecution: true,
@@ -642,7 +596,7 @@ func TestHandleSequentialContinuesAfterError(t *testing.T) {
 				{Number: 2, Body: bodies.Write{Key: fields.Key("b"), Value: values.String("B")}},
 			},
 		},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -661,14 +615,14 @@ func TestHandleBatchHandlerErrorIsInternal(t *testing.T) {
 	rt := handleRuntime(t)
 	rt.readErr = errors.New("db")
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 1,
 		Body: bodies.Batch{
 			IsSequentialExecution: true,
 			IsOneAnswer:           true,
 			Requests:              []bodies.Request{{Number: 1, Body: bodies.Read("a")}},
 		},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -684,7 +638,7 @@ func TestHandleParallelBatch(t *testing.T) {
 	rt.data["b"] = values.String("B")
 	rt.data["c"] = values.String("C")
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 5,
 		Body: bodies.Batch{
 			Requests: []bodies.Request{
@@ -693,7 +647,7 @@ func TestHandleParallelBatch(t *testing.T) {
 				{Number: 3, Body: bodies.Read("missing")},
 			},
 		},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -726,7 +680,7 @@ func TestHandleParallelBatch(t *testing.T) {
 func TestHandleParallelBatchOneAnswer(t *testing.T) {
 	rt := handleRuntimeN(t, 1)
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 6,
 		Body: bodies.Batch{
 			IsOneAnswer: true,
@@ -736,7 +690,7 @@ func TestHandleParallelBatchOneAnswer(t *testing.T) {
 				{Number: 3, Body: bodies.Delete("missing")},
 			},
 		},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -765,7 +719,7 @@ func TestHandleStopReleasesTheRequest(t *testing.T) {
 		rt.data["a"] = values.String("A")
 		rt.data["b"] = values.String("B")
 		requestRow := row.NewRequestRow("user", nil)
-		frames := runHandleStop(t, rt.Runtime, requestRow, mustEncodeFrame(t, frame.Frame{
+		frames := runHandleStop(t, rt.Runtime, requestRow, frame.Frame{
 			RequestID: 1,
 			Body: bodies.Batch{
 				IsSequentialExecution: true,
@@ -774,7 +728,7 @@ func TestHandleStopReleasesTheRequest(t *testing.T) {
 					{Number: 2, Body: bodies.Read("b")},
 				},
 			},
-		}, nil), 1)
+		}, 1)
 		if len(frames) != 1 || onlyResult(t, frames[0]).Number != 1 {
 			t.Fatalf("frames = %+v", frames)
 		}
@@ -790,7 +744,7 @@ func TestHandleStopReleasesTheRequest(t *testing.T) {
 		rt.data["b"] = values.String("B")
 		rt.data["c"] = values.String("C")
 		requestRow := row.NewRequestRow("user", nil)
-		frames := runHandleStop(t, rt.Runtime, requestRow, mustEncodeFrame(t, frame.Frame{
+		frames := runHandleStop(t, rt.Runtime, requestRow, frame.Frame{
 			RequestID: 1,
 			Body: bodies.Batch{
 				Requests: []bodies.Request{
@@ -799,7 +753,7 @@ func TestHandleStopReleasesTheRequest(t *testing.T) {
 					{Number: 3, Body: bodies.Read("c")},
 				},
 			},
-		}, nil), 1)
+		}, 1)
 		if len(frames) != 1 {
 			t.Fatalf("frames = %d, want 1", len(frames))
 		}
@@ -824,7 +778,7 @@ func TestHandleParallelWorkersOverlap(t *testing.T) {
 	}
 
 	requestRow := row.NewRequestRow("user", nil)
-	raw := mustEncodeFrame(t, frame.Frame{
+	request := frame.Frame{
 		RequestID: 1,
 		Body: bodies.Batch{
 			Requests: []bodies.Request{
@@ -833,7 +787,7 @@ func TestHandleParallelWorkersOverlap(t *testing.T) {
 				{Number: 3, Body: bodies.Read("c")},
 			},
 		},
-	}, nil)
+	}
 
 	type outcome struct {
 		frames []frame.Frame
@@ -841,7 +795,7 @@ func TestHandleParallelWorkersOverlap(t *testing.T) {
 	}
 	done := make(chan outcome, 1)
 	go func() {
-		frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, raw)
+		frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, request)
 		done <- outcome{frames, err}
 	}()
 
@@ -893,7 +847,7 @@ func TestHandleParallelInterruptAfterError(t *testing.T) {
 	}
 
 	requestRow := row.NewRequestRow("user", nil)
-	raw := mustEncodeFrame(t, frame.Frame{
+	request := frame.Frame{
 		RequestID: 1,
 		Body: bodies.Batch{
 			InterruptAfterError: true,
@@ -903,13 +857,13 @@ func TestHandleParallelInterruptAfterError(t *testing.T) {
 				{Number: 3, Body: bodies.Write{Key: fields.Key("b"), Value: values.String("B")}},
 			},
 		},
-	}, nil)
+	}
 
 	frames := make(chan frame.Frame, 3)
 	failed := make(chan error, 1)
 	go func() {
 		defer close(frames)
-		for encoded, err := range rt.Handle(context.Background(), bufio.NewReader(bytes.NewReader(raw)), requestRow) {
+		for encoded, err := range rt.Handle(context.Background(), request, requestRow) {
 			if err != nil {
 				failed <- err
 				return
@@ -979,7 +933,7 @@ func TestHandleParallelInterruptAfterError(t *testing.T) {
 func TestHandleSequentialInterruptYieldsSeparateFrames(t *testing.T) {
 	rt := handleRuntime(t)
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 1,
 		Body: bodies.Batch{
 			IsSequentialExecution: true,
@@ -990,7 +944,7 @@ func TestHandleSequentialInterruptYieldsSeparateFrames(t *testing.T) {
 				{Number: 3, Body: bodies.Delete("c")},
 			},
 		},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -1033,7 +987,7 @@ func TestHandleCancelDuringBatchInterruptsTheRest(t *testing.T) {
 		}
 	}
 
-	frames, err := runHandle(t, rt.Runtime, parent, row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, parent, row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 1,
 		Body: bodies.Batch{
 			IsSequentialExecution: true,
@@ -1043,7 +997,7 @@ func TestHandleCancelDuringBatchInterruptsTheRest(t *testing.T) {
 				{Number: 2, Body: bodies.Write{Key: fields.Key("b"), Value: values.String("B")}},
 			},
 		},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -1083,7 +1037,7 @@ func TestHandleParallelCancelDuringBatchInterruptsTheRest(t *testing.T) {
 	}
 
 	requestRow := row.NewRequestRow("user", nil)
-	raw := mustEncodeFrame(t, frame.Frame{
+	request := frame.Frame{
 		RequestID: 1,
 		Body: bodies.Batch{
 			Requests: []bodies.Request{
@@ -1092,13 +1046,13 @@ func TestHandleParallelCancelDuringBatchInterruptsTheRest(t *testing.T) {
 				{Number: 3, Body: bodies.Write{Key: fields.Key("b"), Value: values.String("B")}},
 			},
 		},
-	}, nil)
+	}
 
 	frames := make(chan frame.Frame, 3)
 	failed := make(chan error, 1)
 	go func() {
 		defer close(frames)
-		for encoded, err := range rt.Handle(parent, bufio.NewReader(bytes.NewReader(raw)), requestRow) {
+		for encoded, err := range rt.Handle(parent, request, requestRow) {
 			if err != nil {
 				failed <- err
 				return
@@ -1179,10 +1133,10 @@ func TestHandleErrorAnswerTooLargeClosesConnection(t *testing.T) {
 	rt.limit = 1
 	requestRow := row.NewRequestRow("user", nil)
 
-	_, err := runHandle(t, rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+	_, err := runHandle(t, rt.Runtime, context.Background(), requestRow, frame.Frame{
 		RequestID: 1,
 		Body:      bodies.Read("missing"),
-	}, nil))
+	})
 	assertClose(t, err)
 	if _, ok := errors.AsType[protocolerr.BuildError](err); !ok {
 		t.Fatalf("error = %v, want a build error", err)
@@ -1199,7 +1153,7 @@ func TestHandleBatchWriteAndDeleteErrorsAreInternal(t *testing.T) {
 	rt.deleteErr = errors.New("db")
 	rt.data["b"] = values.String("B")
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), row.NewRequestRow("user", nil), frame.Frame{
 		RequestID: 1,
 		Body: bodies.Batch{
 			IsSequentialExecution: true,
@@ -1209,7 +1163,7 @@ func TestHandleBatchWriteAndDeleteErrorsAreInternal(t *testing.T) {
 				{Number: 2, Body: bodies.Delete("b")},
 			},
 		},
-	}, nil))
+	})
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -1234,13 +1188,13 @@ func TestHandleBatchEncodeFailureIsReturned(t *testing.T) {
 	rt.data["a"] = values.String(strings.Repeat("x", 200))
 	requestRow := row.NewRequestRow("user", nil)
 
-	frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, mustEncodeFrame(t, frame.Frame{
+	frames, err := runHandle(t, rt.Runtime, context.Background(), requestRow, frame.Frame{
 		RequestID: 1,
 		Body: bodies.Batch{
 			IsSequentialExecution: true,
 			Requests:              []bodies.Request{{Number: 1, Body: bodies.Read("a")}},
 		},
-	}, nil))
+	})
 	if len(frames) != 0 {
 		t.Fatalf("frames = %d, want 0", len(frames))
 	}
@@ -1389,10 +1343,10 @@ func callKeys(rt *storedRuntime, op string) []string {
 	return keys
 }
 
-func runHandle(t *testing.T, rt Runtime, ctx context.Context, requestRow *row.RequestRow, raw []byte) ([]frame.Frame, error) {
+func runHandle(t *testing.T, rt Runtime, ctx context.Context, requestRow *row.RequestRow, request frame.Frame) ([]frame.Frame, error) {
 	t.Helper()
 
-	encoded, err := runHandleRaw(rt, ctx, requestRow, raw)
+	encoded, err := runHandleRaw(rt, ctx, requestRow, request)
 	if err != nil {
 		return nil, err
 	}
@@ -1428,11 +1382,11 @@ func readFrames(t *testing.T, frames <-chan frame.Frame, failed <-chan error, n 
 	return got
 }
 
-func runHandleStop(t *testing.T, rt Runtime, requestRow *row.RequestRow, raw []byte, stopAfter int) []frame.Frame {
+func runHandleStop(t *testing.T, rt Runtime, requestRow *row.RequestRow, request frame.Frame, stopAfter int) []frame.Frame {
 	t.Helper()
 
 	var frames []frame.Frame
-	for encoded, err := range rt.Handle(context.Background(), bufio.NewReader(bytes.NewReader(raw)), requestRow) {
+	for encoded, err := range rt.Handle(context.Background(), request, requestRow) {
 		if err != nil {
 			t.Fatalf("error = %v", err)
 		}
@@ -1446,9 +1400,9 @@ func runHandleStop(t *testing.T, rt Runtime, requestRow *row.RequestRow, raw []b
 	return frames
 }
 
-func runHandleRaw(rt Runtime, ctx context.Context, requestRow *row.RequestRow, raw []byte) ([][]byte, error) {
+func runHandleRaw(rt Runtime, ctx context.Context, requestRow *row.RequestRow, request frame.Frame) ([][]byte, error) {
 	var frames [][]byte
-	for encoded, err := range rt.Handle(ctx, bufio.NewReader(bytes.NewReader(raw)), requestRow) {
+	for encoded, err := range rt.Handle(ctx, request, requestRow) {
 		if err != nil {
 			return frames, err
 		}

@@ -156,3 +156,24 @@ func (e ErrorVersionNotActivated) Connection() net.Conn {
 func (e ErrorVersionNotActivated) Error() string {
 	return fmt.Sprintf("version %v for connection %v is not activated", e.version, e.connection)
 }
+
+// ErrorNoActiveVersion is returned when a registered connection has no
+// activated protocol version.
+type ErrorNoActiveVersion struct {
+	connection net.Conn
+}
+
+// NewErrorNoActiveVersion returns an ErrorNoActiveVersion for connection.
+func NewErrorNoActiveVersion(connection net.Conn) ErrorNoActiveVersion {
+	return ErrorNoActiveVersion{connection: connection}
+}
+
+// Connection returns the connection with no active version.
+func (e ErrorNoActiveVersion) Connection() net.Conn {
+	return e.connection
+}
+
+// Error returns a human-readable summary of the error.
+func (e ErrorNoActiveVersion) Error() string {
+	return fmt.Sprintf("connection %v has no active version", e.connection)
+}

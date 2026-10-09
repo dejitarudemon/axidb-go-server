@@ -20,6 +20,7 @@ import (
 // cannot be encoded is yielded as that error.
 func (r Runtime) handleRequest(ctx Context, body body.Body, yield YieldFrameIterator) {
 	if ctx.Err() != nil {
+		r.warnWithCtx(ctx, "request interrupted before handler", "command", body.Command())
 		yield(r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())))
 		return
 	}
@@ -34,8 +35,10 @@ func (r Runtime) handleRequest(ctx Context, body body.Body, yield YieldFrameIter
 	case fields.Ping:
 		r.handlePing(ctx, yield)
 	case fields.Batch:
+		r.infoWithCtx(ctx, "batch", "sequential", body.(bodies.Batch).IsSequentialExecution)
 		r.handleBatch(ctx, body, yield)
 	default:
+		r.warnWithCtx(ctx, "unsupported command in handler", "command", body.Command())
 		yield(r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorUnsupportedCommand(body.Command())))
 	}
 }
@@ -48,26 +51,33 @@ func (r Runtime) handleRequest(ctx Context, body body.Body, yield YieldFrameIter
 // [protocolerrs.ErrorRequestInterrupted]. On success it yields a read answer frame.
 func (r Runtime) handleRead(ctx Context, body body.Body, yield YieldFrameIterator) {
 	rb, _ := body.(bodies.Read)
+	key := fields.Key(rb)
 
-	value, err := r.handlerRead(ctx, fields.Key(rb))
+	r.infoWithCtx(ctx, "read", "key", string(key))
+
+	value, err := r.handlerRead(ctx, key)
 	if ctx.Err() != nil {
 		err = protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())
 	}
 	if err != nil {
+		r.warnWithCtx(ctx, "read failed", "key", string(key), "error", err)
 		yield(r.writeErrAnswer(ctx.RequestID(), err))
 		return
 	}
 	if value == nil {
-		yield(r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorNotFound(fields.Key(rb))))
+		r.infoWithCtx(ctx, "read not found", "key", string(key))
+		yield(r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorNotFound(key)))
 		return
 	}
 
 	result, err := builder.NewFrameBuilder(r.limit).NewReadAnswer(ctx.RequestID(), value)
 	if err != nil {
+		r.errorWithCtx(ctx, "failed to build read answer", "key", string(key), "error", err)
 		yield(r.writeErrAnswer(ctx.RequestID(), err))
 		return
 	}
 
+	r.infoWithCtx(ctx, "read ok", "key", string(key), "type", value.Type())
 	yield(r.encodeFrame(result, nil))
 }
 
@@ -79,21 +89,30 @@ func (r Runtime) handleRead(ctx Context, body body.Body, yield YieldFrameIterato
 func (r Runtime) handleWrite(ctx Context, body body.Body, yield YieldFrameIterator) {
 	rw, _ := body.(bodies.Write)
 
+	valueType := any(nil)
+	if rw.Value != nil {
+		valueType = rw.Value.Type()
+	}
+	r.infoWithCtx(ctx, "write", "key", string(rw.Key), "type", valueType)
+
 	err := r.handlerWrite(ctx, rw.Key, rw.Value)
 	if ctx.Err() != nil {
 		err = protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())
 	}
 	if err != nil {
+		r.warnWithCtx(ctx, "write failed", "key", string(rw.Key), "error", err)
 		yield(r.writeErrAnswer(ctx.RequestID(), err))
 		return
 	}
 
 	result, err := builder.NewFrameBuilder(r.limit).NewWriteAnswer(ctx.RequestID())
 	if err != nil {
+		r.errorWithCtx(ctx, "failed to build write answer", "key", string(rw.Key), "error", err)
 		yield(r.writeErrAnswer(ctx.RequestID(), err))
 		return
 	}
 
+	r.infoWithCtx(ctx, "write ok", "key", string(rw.Key))
 	yield(r.encodeFrame(result, nil))
 }
 
@@ -104,22 +123,28 @@ func (r Runtime) handleWrite(ctx Context, body body.Body, yield YieldFrameIterat
 // [protocolerrs.ErrorRequestInterrupted]. On success it yields a delete answer frame.
 func (r Runtime) handleDelete(ctx Context, body body.Body, yield YieldFrameIterator) {
 	rd, _ := body.(bodies.Delete)
+	key := fields.Key(rd)
 
-	err := r.handlerDelete(ctx, fields.Key(rd))
+	r.infoWithCtx(ctx, "delete", "key", string(key))
+
+	err := r.handlerDelete(ctx, key)
 	if ctx.Err() != nil {
 		err = protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())
 	}
 	if err != nil {
+		r.warnWithCtx(ctx, "delete failed", "key", string(key), "error", err)
 		yield(r.writeErrAnswer(ctx.RequestID(), err))
 		return
 	}
 
 	result, err := builder.NewFrameBuilder(r.limit).NewDeleteAnswer(ctx.RequestID())
 	if err != nil {
+		r.errorWithCtx(ctx, "failed to build delete answer", "key", string(key), "error", err)
 		yield(r.writeErrAnswer(ctx.RequestID(), err))
 		return
 	}
 
+	r.infoWithCtx(ctx, "delete ok", "key", string(key))
 	yield(r.encodeFrame(result, nil))
 }
 
@@ -127,16 +152,19 @@ func (r Runtime) handleDelete(ctx Context, body body.Body, yield YieldFrameItera
 // A context that is already cancelled is answered with [protocolerrs.ErrorRequestInterrupted].
 func (r Runtime) handlePing(ctx Context, yield YieldFrameIterator) {
 	if ctx.Err() != nil {
+		r.warnWithCtx(ctx, "ping interrupted")
 		yield(r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())))
 		return
 	}
 
 	result, err := builder.NewFrameBuilder(r.limit).NewPingAnswer(ctx.RequestID())
 	if err != nil {
+		r.errorWithCtx(ctx, "failed to build ping answer", "error", err)
 		yield(r.writeErrAnswer(ctx.RequestID(), err))
 		return
 	}
 
+	r.debugWithCtx(ctx, "ping ok")
 	yield(r.encodeFrame(result, nil))
 }
 

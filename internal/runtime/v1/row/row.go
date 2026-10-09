@@ -1,24 +1,31 @@
 package row
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 )
 
+// ErrNoFreeRequestID means every non-zero request ID is already registered.
+var ErrNoFreeRequestID = errors.New("no free request ID")
+
 // RequestRow tracks active independent request IDs for one login and the
 // compressions negotiated for that connection.
 //
-// Each ID is stored with the isExternal flag passed to [RequestRow.Register].
-// The compression set is fixed by [NewRequestRow]. Count reports how many IDs
-// are currently registered. Methods are safe for concurrent use. A RequestRow
-// contains a mutex and must not be copied; share the pointer returned by
-// [NewRequestRow].
+// Each ID is stored with the isExternal flag passed to [RequestRow.Register]
+// or [RequestRow.Reserve]. The compression set is fixed by [NewRequestRow].
+// Count reports how many IDs are currently registered. Methods are safe for
+// concurrent use. A RequestRow contains a mutex and must not be copied; share
+// the pointer returned by [NewRequestRow].
 type RequestRow struct {
 	login        string
 	requests     map[fields.RequestID]bool
 	compressions map[fields.Compression]struct{}
+
+	// next is the next candidate for [RequestRow.Reserve]. Zero means start at 1.
+	next fields.RequestID
 
 	mx sync.RWMutex
 }
@@ -57,6 +64,40 @@ func (r *RequestRow) Register(requestID fields.RequestID, isExternal bool) error
 	r.requests[requestID] = isExternal
 
 	return nil
+}
+
+// Reserve picks a free non-zero request ID, marks it active with isExternal,
+// and returns it.
+//
+// Zero is never returned: protocol builders reject it for ping and similar
+// frames. Candidates advance from the last reserved id; freed ids are reused
+// after the counter wraps. If every non-zero ID is already registered, Reserve
+// returns [ErrNoFreeRequestID].
+func (r *RequestRow) Reserve(isExternal bool) (fields.RequestID, error) {
+	r.mx.Lock()
+	defer r.mx.Unlock()
+
+	start := r.next
+	if start == 0 {
+		start = 1
+	}
+
+	id := start
+	for {
+		if _, ok := r.requests[id]; !ok {
+			r.requests[id] = isExternal
+			r.next = id + 1
+			return id, nil
+		}
+
+		id++
+		if id == 0 {
+			id = 1
+		}
+		if id == start {
+			return 0, ErrNoFreeRequestID
+		}
+	}
 }
 
 // Terminate removes requestID from the active set.

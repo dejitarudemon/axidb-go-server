@@ -30,7 +30,8 @@ func newVersionsTable() versionsTable {
 //
 // A connection present in the table is registered. Each granted version may
 // hold one [RegistrationRow]. Every version recorded for a connection stays
-// until [ConnectionsTable.Terminate] removes that connection.
+// until [ConnectionsTable.Terminate] removes that connection, or until
+// [ConnectionsTable.Close] clears the whole table.
 //
 // The methods are safe for concurrent use. A ConnectionsTable contains a mutex
 // and must not be copied. Use the pointer from [NewConnectionsTable]. The zero
@@ -199,4 +200,71 @@ func (c *ConnectionsTable) Stats() ConnectionsTableStats {
 	}
 
 	return stats
+}
+
+// Close removes every connection and every version recorded for them.
+//
+// After Close the table is empty. Connections may be registered again.
+// Close on an empty table is a no-op.
+func (c *ConnectionsTable) Close() {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
+	for connection := range c.table {
+		delete(c.table, connection)
+	}
+}
+
+// IsRegistered reports whether conn is in the table.
+//
+// A nil connection or a connection that is not registered is reported as false.
+func (c *ConnectionsTable) IsRegistered(conn net.Conn) bool {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+
+	_, ok := c.table[conn]
+	return ok
+}
+
+// MinActiveVersion returns the smallest activated protocol version on
+// connection and its [RegistrationRow].
+//
+// A nil connection returns [ErrorNilConnection]. A connection that is not
+// registered returns [ErrorConnectionNotRegistered]. A registered connection
+// with no activated version returns [ErrorNoActiveVersion].
+func (c *ConnectionsTable) MinActiveVersion(connection net.Conn) (fields.Version, RegistrationRow, error) {
+	if connection == nil {
+		return 0, nil, NewErrorNilConnection()
+	}
+
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+
+	versions, ok := c.table[connection]
+	if !ok {
+		return 0, nil, NewErrorConnectionNotRegistered(connection)
+	}
+
+	var (
+		found   bool
+		minVer  fields.Version
+		minRow  RegistrationRow
+	)
+
+	for version, table := range versions {
+		if table.row == nil {
+			continue
+		}
+		if !found || version < minVer {
+			found = true
+			minVer = version
+			minRow = table.row
+		}
+	}
+
+	if !found {
+		return 0, nil, NewErrorNoActiveVersion(connection)
+	}
+
+	return minVer, minRow, nil
 }

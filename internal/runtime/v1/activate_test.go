@@ -8,21 +8,19 @@ import (
 	"testing"
 
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
 )
 
 func TestActivateAcceptsTheClient(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
-	raw := mustEncodeFrame(t, frame.Frame{
-		RequestID: 1,
-		Body:      bodies.NewHandshake("user", [32]byte{1}, nil),
-	}, nil)
+	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
+		WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
+			return true, nil
+		}).
+		Build()
 
-	requestRow, versions, answer, err := rt.Activate(context.Background(), bufio.NewReader(bytes.NewReader(raw)), []byte("peer"), false)
+	requestRow, versions, answer, err := rt.Activate(context.Background(), handshakeRequest(), []byte("peer"), false)
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -52,7 +50,7 @@ func TestActivateRejectsUnauthorized(t *testing.T) {
 		}).
 		Build()
 
-	requestRow, _, answer, err := rt.Activate(context.Background(), bufio.NewReader(bytes.NewReader(handshakeFrame(t))), []byte("peer"), false)
+	requestRow, _, answer, err := rt.Activate(context.Background(), handshakeRequest(), []byte("peer"), false)
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -73,7 +71,7 @@ func TestActivateAuthErrorBecomesAnAnswer(t *testing.T) {
 		}).
 		Build()
 
-	requestRow, _, answer, err := rt.Activate(context.Background(), bufio.NewReader(bytes.NewReader(handshakeFrame(t))), nil, false)
+	requestRow, _, answer, err := rt.Activate(context.Background(), handshakeRequest(), nil, false)
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -89,9 +87,11 @@ func TestActivateAuthErrorBecomesAnAnswer(t *testing.T) {
 
 func TestActivateUnexpectedCommand(t *testing.T) {
 	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
-	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, nil)
 
-	requestRow, _, answer, err := rt.Activate(context.Background(), bufio.NewReader(bytes.NewReader(raw)), nil, false)
+	requestRow, _, answer, err := rt.Activate(context.Background(), frame.Frame{
+		RequestID: 1,
+		Body:      bodies.Ping{},
+	}, nil, false)
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -114,7 +114,7 @@ func TestActivateSkipAuthDoesNotCallTheHandler(t *testing.T) {
 		}).
 		Build()
 
-	requestRow, versions, answer, err := rt.Activate(context.Background(), bufio.NewReader(bytes.NewReader(handshakeFrame(t))), []byte("peer"), true)
+	requestRow, versions, answer, err := rt.Activate(context.Background(), handshakeRequest(), []byte("peer"), true)
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -149,9 +149,11 @@ func TestActivateSkipAuthStillRequiresHandshake(t *testing.T) {
 			return true, nil
 		}).
 		Build()
-	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, nil)
 
-	requestRow, _, answer, err := rt.Activate(context.Background(), bufio.NewReader(bytes.NewReader(raw)), nil, true)
+	requestRow, _, answer, err := rt.Activate(context.Background(), frame.Frame{
+		RequestID: 1,
+		Body:      bodies.Ping{},
+	}, nil, true)
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}
@@ -169,30 +171,35 @@ func TestActivateSkipAuthStillRequiresHandshake(t *testing.T) {
 	}
 }
 
-func TestActivateBodyLimitClosesConnection(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(0)).Build()
-	_, _, answer, err := rt.Activate(context.Background(), bufio.NewReader(bytes.NewReader(handshakeFrame(t))), nil, false)
+func TestActivateInvalidHandshakeIsAnAnswer(t *testing.T) {
+	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 
-	if answer != nil {
-		t.Fatalf("answer = %v, want nil", answer)
+	requestRow, _, answer, err := rt.Activate(context.Background(), frame.Frame{
+		RequestID: 1,
+		Body: bodies.Handshake{
+			Login:        "user",
+			Hash:         [32]byte{1},
+			Compressions: make([]fields.Compression, bodies.MaxCompressionsPerOneHandshake+1),
+		},
+	}, nil, false)
+	if err != nil {
+		t.Fatalf("error = %v", err)
 	}
 
-	if !errors.Is(err, errs.ErrCloseConnection) {
-		t.Fatalf("error = %v, want close connection", err)
+	if requestRow != nil {
+		t.Fatal("row is set, want nil")
 	}
 
-	if _, ok := errors.AsType[protocolerrs.ErrorBodyLimitIsExceeded](err); !ok {
-		t.Fatalf("error = %v, want body limit exceeded", err)
+	if code := decodedErrorCode(t, rt, answer); code != fields.InternalError {
+		t.Errorf("code = %v, want internal", code)
 	}
 }
 
-func handshakeFrame(t *testing.T) []byte {
-	t.Helper()
-
-	return mustEncodeFrame(t, frame.Frame{
+func handshakeRequest() frame.Frame {
+	return frame.Frame{
 		RequestID: 1,
 		Body:      bodies.NewHandshake("user", [32]byte{1}, nil),
-	}, nil)
+	}
 }
 
 func decodedErrorCode(t *testing.T, rt Runtime, raw []byte) fields.Error {

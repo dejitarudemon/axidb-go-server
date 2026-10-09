@@ -106,6 +106,165 @@ func TestRequestRowDuplicateRegister(t *testing.T) {
 	}
 }
 
+func TestRequestRowReserve(t *testing.T) {
+	row := NewRequestRow("user", nil)
+
+	first, err := row.Reserve(false)
+	if err != nil {
+		t.Fatalf("Reserve() = %v", err)
+	}
+	if first == 0 {
+		t.Fatal("Reserve() = 0, want a non-zero id")
+	}
+
+	second, err := row.Reserve(true)
+	if err != nil {
+		t.Fatalf("Reserve() again = %v", err)
+	}
+	if second == 0 || second == first {
+		t.Fatalf("Reserve() = %d, want a new non-zero id", second)
+	}
+
+	isExternal, ok := row.IsRegistered(first)
+	if !ok || isExternal {
+		t.Fatalf("IsRegistered(%d) = (%v, %v), want (false, true)", first, isExternal, ok)
+	}
+
+	isExternal, ok = row.IsRegistered(second)
+	if !ok || !isExternal {
+		t.Fatalf("IsRegistered(%d) = (%v, %v), want (true, true)", second, isExternal, ok)
+	}
+
+	if row.Count() != 2 {
+		t.Fatalf("Count() = %d, want 2", row.Count())
+	}
+
+	row.Terminate(first)
+	third, err := row.Reserve(false)
+	if err != nil {
+		t.Fatalf("Reserve() after Terminate = %v", err)
+	}
+	if third == 0 || third == second {
+		t.Fatalf("Reserve() = %d, want a new id", third)
+	}
+}
+
+func TestRequestRowReserveSkipsOccupiedAndZero(t *testing.T) {
+	row := NewRequestRow("user", nil)
+
+	if err := row.Register(0, false); err != nil {
+		t.Fatalf("Register(0) = %v", err)
+	}
+	if err := row.Register(1, false); err != nil {
+		t.Fatalf("Register(1) = %v", err)
+	}
+	if err := row.Register(3, false); err != nil {
+		t.Fatalf("Register(3) = %v", err)
+	}
+
+	got, err := row.Reserve(false)
+	if err != nil {
+		t.Fatalf("Reserve() = %v", err)
+	}
+	if got != 2 {
+		t.Fatalf("Reserve() = %d, want 2", got)
+	}
+
+	got, err = row.Reserve(false)
+	if err != nil {
+		t.Fatalf("Reserve() = %v", err)
+	}
+	if got != 4 {
+		t.Fatalf("Reserve() = %d, want 4", got)
+	}
+}
+
+func TestRequestRowReserveWraps(t *testing.T) {
+	row := NewRequestRow("user", nil)
+	row.next = ^fields.RequestID(0)
+
+	got, err := row.Reserve(false)
+	if err != nil {
+		t.Fatalf("Reserve() = %v", err)
+	}
+	if got != ^fields.RequestID(0) {
+		t.Fatalf("Reserve() = %d, want max uint32", got)
+	}
+
+	got, err = row.Reserve(false)
+	if err != nil {
+		t.Fatalf("Reserve() after wrap = %v", err)
+	}
+	if got != 1 {
+		t.Fatalf("Reserve() = %d, want 1", got)
+	}
+}
+
+func TestRequestRowReserveReusesAfterWrap(t *testing.T) {
+	row := NewRequestRow("user", nil)
+
+	first, err := row.Reserve(false)
+	if err != nil {
+		t.Fatalf("Reserve() = %v", err)
+	}
+	row.Terminate(first)
+	row.next = ^fields.RequestID(0)
+
+	if _, err := row.Reserve(false); err != nil {
+		t.Fatalf("Reserve(max) = %v", err)
+	}
+
+	reused, err := row.Reserve(false)
+	if err != nil {
+		t.Fatalf("Reserve() after wrap = %v", err)
+	}
+	if reused != first {
+		t.Fatalf("Reserve() = %d, want reused %d", reused, first)
+	}
+}
+
+func TestRequestRowConcurrentReserve(t *testing.T) {
+	const n = 64
+
+	row := NewRequestRow("user", nil)
+	ids := make([]fields.RequestID, n)
+
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for i := range n {
+		go func(i int) {
+			defer wg.Done()
+
+			id, err := row.Reserve(false)
+			if err != nil {
+				t.Errorf("Reserve() = %v", err)
+				return
+			}
+			if id == 0 {
+				t.Error("Reserve() = 0")
+				return
+			}
+			ids[i] = id
+		}(i)
+	}
+	wg.Wait()
+
+	if row.Count() != n {
+		t.Fatalf("Count() = %d, want %d", row.Count(), n)
+	}
+
+	seen := make(map[fields.RequestID]struct{}, n)
+	for _, id := range ids {
+		if id == 0 {
+			t.Fatal("missing id")
+		}
+		if _, ok := seen[id]; ok {
+			t.Fatalf("duplicate id %d", id)
+		}
+		seen[id] = struct{}{}
+	}
+}
+
 func TestRequestRowTerminateUnknown(t *testing.T) {
 	row := NewRequestRow("user", nil)
 
@@ -229,6 +388,7 @@ func TestRequestRowNilPanics(t *testing.T) {
 		call func()
 	}{
 		{"register", func() { _ = row.Register(1, false) }},
+		{"reserve", func() { _, _ = row.Reserve(false) }},
 		{"terminate", func() { row.Terminate(1) }},
 		{"is registered", func() { _, _ = row.IsRegistered(1) }},
 		{"count", func() { _ = row.Count() }},

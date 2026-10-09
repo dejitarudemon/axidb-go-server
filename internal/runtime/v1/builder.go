@@ -8,6 +8,7 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/decoder"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
+	"github.com/dejitarudemon/axidb-go-server/internal/logger"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
 )
 
@@ -21,9 +22,10 @@ type RuntimeBuilder struct {
 
 // NewRuntimerBuilder returns a builder filled from config.
 //
-// Read, write, delete, and auth handlers start as the package stubs. Replace
-// them with WithHandler* before Build. The runtime frame-size limit is the
-// config body limit, in bytes. The parallel-batch goroutine limit is
+// Read, write, delete, and auth handlers start as package stubs that return
+// the protocol CommandNotImplemented error. Replace them with WithHandler*
+// before Build. The runtime frame-size limit is the config body limit, in
+// bytes. The parallel-batch goroutine limit is
 // [config.RuntimeBuilderConfig.MaxGoroutinesPerBatch].
 func NewRuntimerBuilder(cfg config.RuntimeBuilderConfig) *RuntimeBuilder {
 	return &RuntimeBuilder{
@@ -107,6 +109,15 @@ func (rb *RuntimeBuilder) WithHandlerAuth(handler func(ctx Context, login string
 		rb.runtime.handlerAuth = handler
 	}
 
+	return rb
+}
+
+// WithLogger sets the optional [logger.Logger] used by the runtime.
+// A nil logger is ignored and the current logger is kept (nil by default).
+func (rb *RuntimeBuilder) WithLogger(log logger.Logger) *RuntimeBuilder {
+	if log != nil {
+		rb.runtime.logger = log
+	}
 	return rb
 }
 

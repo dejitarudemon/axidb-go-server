@@ -141,16 +141,12 @@ func TestRuntimeBuilderBuiltHandlersStay(t *testing.T) {
 	rt := rb.Build()
 
 	rb.WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
-		return false, nil
+		return true, nil
 	})
 
 	ok, err := rt.handlerAuth(Context{}, "user", [32]byte{1})
-	if err != nil {
-		t.Fatalf("auth error = %v, want nil", err)
-	}
-
-	if !ok {
-		t.Fatal("authenticated = false, want true")
+	if _, asOK := errors.AsType[protocolerrs.ErrorCommandNotImplemented](err); !asOK || ok {
+		t.Fatalf("auth = (%v, %T(%v)), want built default (false, ErrorCommandNotImplemented)", ok, err, err)
 	}
 }
 
@@ -316,21 +312,23 @@ func assertDefaultHandlers(t *testing.T, rt Runtime) {
 	t.Helper()
 
 	got, err := rt.handlerRead(Context{}, fields.Key("k"))
-	if err != nil || got != nil {
-		t.Fatalf("read = (%v, %v), want (nil, nil)", got, err)
+	if _, ok := errors.AsType[protocolerrs.ErrorCommandNotImplemented](err); !ok || got != nil {
+		t.Fatalf("read = (%v, %T(%v)), want (nil, ErrorCommandNotImplemented)", got, err, err)
 	}
 
-	if err = rt.handlerWrite(Context{}, fields.Key("k"), nil); err != nil {
-		t.Fatalf("write error = %v, want nil", err)
+	err = rt.handlerWrite(Context{}, fields.Key("k"), nil)
+	if _, ok := errors.AsType[protocolerrs.ErrorCommandNotImplemented](err); !ok {
+		t.Fatalf("write error = %T(%v), want ErrorCommandNotImplemented", err, err)
 	}
 
-	if err = rt.handlerDelete(Context{}, fields.Key("k")); err != nil {
-		t.Fatalf("delete error = %v, want nil", err)
+	err = rt.handlerDelete(Context{}, fields.Key("k"))
+	if _, ok := errors.AsType[protocolerrs.ErrorCommandNotImplemented](err); !ok {
+		t.Fatalf("delete error = %T(%v), want ErrorCommandNotImplemented", err, err)
 	}
 
 	ok, err := rt.handlerAuth(Context{}, "user", [32]byte{})
-	if err != nil || !ok {
-		t.Fatalf("auth = (%v, %v), want (true, nil)", ok, err)
+	if _, asOK := errors.AsType[protocolerrs.ErrorCommandNotImplemented](err); !asOK || ok {
+		t.Fatalf("auth = (%v, %T(%v)), want (false, ErrorCommandNotImplemented)", ok, err, err)
 	}
 }
 

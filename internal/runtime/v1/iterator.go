@@ -2,7 +2,7 @@ package runtime_v1
 
 import "iter"
 
-// FrameIterator yields the encoded answers of one request.
+// FrameIterator yields the encoded answers of one already decoded request.
 //
 // The caller ranges over the iterator. Each pair is one frame: the encoded
 // bytes and an error. A nil error means the caller writes the bytes and keeps

@@ -1,6 +1,7 @@
 package runtime_v1
 
 import (
+	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
 )
@@ -9,31 +10,34 @@ import (
 // runtime never panics on a nil handler. Callers must register a real read
 // handler via [RuntimeBuilder.WithHandlerRead].
 //
-// It returns (nil, nil), which the runtime treats the same as (nil, ErrorNotFound).
+// It returns [protocolerrs.ErrorCommandNotImplemented].
 func defaultHandlerRead(ctx Context, key fields.Key) (value.V, error) {
-	return nil, nil
+	return nil, protocolerrs.NewErrorCommandNotImplemented()
 }
 
 // defaultHandlerWrite is the stub write handler wired by [NewRuntimerBuilder] so
-// the runtime never panics on a nil handler. It accepts the write and performs
-// no storage. Callers must register a real write handler via
-// [RuntimeBuilder.WithHandlerWrite].
+// the runtime never panics on a nil handler. Callers must register a real write
+// handler via [RuntimeBuilder.WithHandlerWrite].
+//
+// It returns [protocolerrs.ErrorCommandNotImplemented].
 func defaultHandlerWrite(ctx Context, key fields.Key, value value.V) error {
-	return nil
+	return protocolerrs.NewErrorCommandNotImplemented()
 }
 
 // defaultHandlerDelete is the stub delete handler wired by [NewRuntimerBuilder]
-// so the runtime never panics on a nil handler. It accepts the delete and
-// performs no storage. Callers must register a real delete handler via
-// [RuntimeBuilder.WithHandlerDelete].
+// so the runtime never panics on a nil handler. Callers must register a real
+// delete handler via [RuntimeBuilder.WithHandlerDelete].
+//
+// It returns [protocolerrs.ErrorCommandNotImplemented].
 func defaultHandlerDelete(ctx Context, key fields.Key) error {
-	return nil
+	return protocolerrs.NewErrorCommandNotImplemented()
 }
 
 // defaultHandlerAuth is the stub auth handler wired by [NewRuntimerBuilder] so
-// the runtime never panics on a nil handler. It always reports success; callers
-// are responsible for registering a real auth handler via
-// [RuntimeBuilder.WithHandlerAuth].
+// the runtime never panics on a nil handler. Callers must register a real auth
+// handler via [RuntimeBuilder.WithHandlerAuth].
+//
+// It returns (false, [protocolerrs.ErrorCommandNotImplemented]).
 func defaultHandlerAuth(ctx Context, login string, hash [32]byte) (bool, error) {
-	return true, nil
+	return false, protocolerrs.NewErrorCommandNotImplemented()
 }
