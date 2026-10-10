@@ -38,6 +38,10 @@ func TestNewRuntimeBuilderConfigDefaults(t *testing.T) {
 		t.Errorf("goroutines = %d, want %d", cfg.limits.goroutines, defaultGoroutinesPerParrallelBatch)
 	}
 
+	if cfg.StartUseCompressionAt() != defaultStartUseCompression {
+		t.Errorf("compression = %d, want %d", cfg.StartUseCompressionAt(), defaultStartUseCompression)
+	}
+
 	if !slices.Equal(cfg.versions, []fields.Version{1}) {
 		t.Errorf("versions = %v, want [1]", cfg.versions)
 	}
@@ -106,6 +110,28 @@ func TestRuntimeBuilderConfigGoroutines(t *testing.T) {
 			cfg := NewRuntimeBuilderConfig().WithMaxGoroutinesPerBatch(tt.set)
 			if cfg.MaxGoroutinesPerBatch() != tt.want {
 				t.Errorf("goroutines = %d, want %d", cfg.MaxGoroutinesPerBatch(), tt.want)
+			}
+		})
+	}
+}
+
+func TestRuntimeBuilderConfigStartUseCompressionAt(t *testing.T) {
+	tests := []struct {
+		name string
+		set  int
+		want int
+	}{
+		{"zero allowed", 0, 0},
+		{"negative becomes zero", -3, 0},
+		{"one", 1, 1},
+		{"custom", 4096, 4096},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := NewRuntimeBuilderConfig().WithStartUseCompressionAt(tt.set)
+			if cfg.StartUseCompressionAt() != tt.want {
+				t.Errorf("StartUseCompressionAt() = %d, want %d", cfg.StartUseCompressionAt(), tt.want)
 			}
 		})
 	}
@@ -186,6 +212,7 @@ func TestRuntimeBuilderConfigNilPanics(t *testing.T) {
 		{"body", func() { cfg.WithBodyLimit(1) }},
 		{"batch", func() { cfg.WithBatchLimit(1) }},
 		{"goroutines", func() { cfg.WithMaxGoroutinesPerBatch(1) }},
+		{"compression", func() { cfg.WithStartUseCompressionAt(1) }},
 		{"compressors", func() { cfg.WithCompressors(stubCompressor{code: fields.Zstd}) }},
 		{"versions", func() { cfg.WithAllowedVersions(1) }},
 	}

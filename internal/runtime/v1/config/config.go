@@ -15,6 +15,10 @@ const (
 	// defaultGoroutinesPerParrallelBatch is how many nested commands of one
 	// parallel batch may run at once when the config does not set another limit.
 	defaultGoroutinesPerParrallelBatch = 4
+
+	// defaultStartUseCompression is the default body size (bytes) at which
+	// answers may start using compression (5 KiB).
+	defaultStartUseCompression = 10 << 9
 )
 
 var (
@@ -24,10 +28,13 @@ var (
 
 // limits holds decoder/runtime size constraints from [RuntimeBuilderConfig].
 type limits struct {
-	body       fields.BodyLimit
-	batch      fields.BatchLimit
+	body  fields.BodyLimit
+	batch fields.BatchLimit
 	// goroutines is how many nested commands of one parallel batch may run at once.
 	goroutines int
+
+	// compression is the body size (bytes) at which answer compression may start.
+	compression int
 }
 
 // RuntimeBuilderConfig holds construction options for the v1 runtime builder.
@@ -40,14 +47,16 @@ type RuntimeBuilderConfig struct {
 }
 
 // NewRuntimeBuilderConfig returns a config with default limits (10 KiB body,
-// 64 operations per batch, 4 goroutines per parallel batch), protocol version 1
-// allowed, and no compressors registered (requests are accepted only uncompressed).
+// 64 operations per batch, 4 goroutines per parallel batch, compression from
+// 5 KiB body size), protocol version 1 allowed, and no compressors registered
+// (requests are accepted only uncompressed).
 func NewRuntimeBuilderConfig() *RuntimeBuilderConfig {
 	return &RuntimeBuilderConfig{
 		limits: limits{
-			body:       defaultBodyLimit,
-			batch:      defaultBatchLimit,
-			goroutines: defaultGoroutinesPerParrallelBatch,
+			body:        defaultBodyLimit,
+			batch:       defaultBatchLimit,
+			goroutines:  defaultGoroutinesPerParrallelBatch,
+			compression: defaultStartUseCompression,
 		},
 		versions:    append([]fields.Version(nil), defaultVersions...),
 		compressors: make([]compressor.Compressor, 0),
@@ -131,4 +140,19 @@ func (rbc *RuntimeBuilderConfig) hasCompressor(code fields.Compression) bool {
 
 func (rbc *RuntimeBuilderConfig) hasVersion(version fields.Version) bool {
 	return slices.Contains(rbc.versions, version)
+}
+
+// WithStartUseCompressionAt sets the minimum encoded body size in bytes at
+// which the runtime may compress answers. A negative value is raised to 0
+// (compress whenever a compressor is otherwise selected). Compression still
+// requires registered compressors and client handshake support.
+func (rbc *RuntimeBuilderConfig) WithStartUseCompressionAt(start int) *RuntimeBuilderConfig {
+	rbc.limits.compression = max(0, start)
+	return rbc
+}
+
+// StartUseCompressionAt returns the body-size threshold (bytes) for answer
+// compression. Bodies smaller than this are left uncompressed.
+func (rbc *RuntimeBuilderConfig) StartUseCompressionAt() int {
+	return rbc.limits.compression
 }
