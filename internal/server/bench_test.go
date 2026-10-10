@@ -28,7 +28,7 @@ func benchConfig(b *testing.B) *serverconfig.ServerConfig {
 func benchRuntime(b *testing.B) *runtime_v1.Runtime {
 	b.Helper()
 
-	rt := runtime_v1.NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().
+	rt := runtime_v1.NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().
 		WithBodyLimit(v1TestLimit).
 		WithMaxGoroutinesPerBatch(8)).
 		WithHandlerAuth(func(runtime_v1.Context, string, [32]byte) (bool, error) {

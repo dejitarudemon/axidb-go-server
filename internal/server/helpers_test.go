@@ -60,15 +60,15 @@ func startTestServer(t testing.TB, cfg *serverconfig.ServerConfig, rt *runtime_v
 func testRuntime(t testing.TB) *runtime_v1.Runtime {
 	t.Helper()
 
-	rt := NewRuntimerBuilderForTest(t)
+	rt := NewRuntimeBuilderForTest(t)
 	return &rt
 }
 
-// NewRuntimerBuilderForTest builds a v1 runtime with accepting auth for server tests.
-func NewRuntimerBuilderForTest(t testing.TB) runtime_v1.Runtime {
+// NewRuntimeBuilderForTest builds a v1 runtime with accepting auth for server tests.
+func NewRuntimeBuilderForTest(t testing.TB) runtime_v1.Runtime {
 	t.Helper()
 
-	return runtime_v1.NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(v1TestLimit)).
+	return runtime_v1.NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(v1TestLimit)).
 		WithHandlerAuth(func(runtime_v1.Context, string, [32]byte) (bool, error) {
 			return true, nil
 		}).
@@ -78,7 +78,7 @@ func NewRuntimerBuilderForTest(t testing.TB) runtime_v1.Runtime {
 func rejectAuthRuntime(t testing.TB) *runtime_v1.Runtime {
 	t.Helper()
 
-	rt := runtime_v1.NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(v1TestLimit)).
+	rt := runtime_v1.NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(v1TestLimit)).
 		WithHandlerAuth(func(runtime_v1.Context, string, [32]byte) (bool, error) {
 			return false, nil
 		}).

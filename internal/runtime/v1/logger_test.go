@@ -41,7 +41,7 @@ func (m *memLogger) Error(msg string, _ ...any) {
 
 func TestWithLoggerNilKeepsCurrent(t *testing.T) {
 	log := &memLogger{}
-	rb := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig()).WithLogger(log)
+	rb := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig()).WithLogger(log)
 	if rb.WithLogger(nil) != rb {
 		t.Fatal("WithLogger(nil) returned a different builder")
 	}
@@ -53,7 +53,7 @@ func TestWithLoggerNilKeepsCurrent(t *testing.T) {
 
 func TestActivateLogsUnauthorized(t *testing.T) {
 	log := &memLogger{}
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
 		WithLogger(log).
 		WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
 			return false, nil
@@ -84,7 +84,7 @@ func TestActivateLogsUnauthorized(t *testing.T) {
 func TestLoggerAddsTimeField(t *testing.T) {
 	var args []any
 	log := loggerSpy{onInfo: func(_ string, a ...any) { args = a }}
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig()).WithLogger(log).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig()).WithLogger(log).Build()
 
 	before := time.Now().Add(-time.Second)
 	rt.info("hello", "k", 1)
@@ -105,7 +105,7 @@ func TestLoggerAddsTimeField(t *testing.T) {
 func TestInfoWithCtxAddsLoginAndRequestID(t *testing.T) {
 	var args []any
 	log := loggerSpy{onInfo: func(_ string, a ...any) { args = a }}
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig()).WithLogger(log).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig()).WithLogger(log).Build()
 
 	ctx := NewContext(context.Background(), "alice", 7, true)
 	rt.infoWithCtx(ctx, "read", "key", "k")

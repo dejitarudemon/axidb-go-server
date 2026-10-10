@@ -20,7 +20,7 @@ type RuntimeBuilder struct {
 	runtime Runtime
 }
 
-// NewRuntimerBuilder returns a builder filled from config.
+// NewRuntimeBuilder returns a builder filled from config.
 //
 // Read, write, delete, and auth handlers start as package stubs that return
 // the protocol CommandNotImplemented error. Replace them with WithHandler*
@@ -29,7 +29,7 @@ type RuntimeBuilder struct {
 // [config.RuntimeBuilderConfig.MaxGoroutinesPerBatch]. Answer compression
 // starts at [config.RuntimeBuilderConfig.StartUseCompressionAt] when
 // compressors are registered.
-func NewRuntimerBuilder(cfg config.RuntimeBuilderConfig) *RuntimeBuilder {
+func NewRuntimeBuilder(cfg config.RuntimeBuilderConfig) *RuntimeBuilder {
 	compressors := compressorsToRuntimeMap(cfg.Compressors())
 	return &RuntimeBuilder{
 		runtime: Runtime{

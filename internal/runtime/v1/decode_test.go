@@ -16,7 +16,7 @@ import (
 )
 
 func TestDecodeAcceptsAFrame(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 	raw := encodeFrameBytes(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}})
 
 	got, answer, err := rt.Decode(bufio.NewReader(bytes.NewReader(raw)))
@@ -32,7 +32,7 @@ func TestDecodeAcceptsAFrame(t *testing.T) {
 }
 
 func TestDecodeBodyLimitClosesConnection(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(0)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(0)).Build()
 	raw := encodeFrameBytes(t, frame.Frame{RequestID: 1, Body: bodies.Read("x")})
 
 	got, answer, err := rt.Decode(bufio.NewReader(bytes.NewReader(raw)))
@@ -49,7 +49,7 @@ func TestDecodeBodyLimitClosesConnection(t *testing.T) {
 }
 
 func TestDecodeShortReadClosesConnection(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 
 	got, answer, err := rt.Decode(bufio.NewReader(bytes.NewReader([]byte{0x01, 0x02})))
 	if answer != nil {
@@ -65,7 +65,7 @@ func TestDecodeShortReadClosesConnection(t *testing.T) {
 }
 
 func TestDecodeUnsupportedCompressionClosesConnection(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 	raw := encodeFrameBytes(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}})
 	raw[8] = 9
 
@@ -83,7 +83,7 @@ func TestDecodeUnsupportedCompressionClosesConnection(t *testing.T) {
 }
 
 func TestDecodeChecksumMismatchIsAnAnswer(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 	raw := encodeFrameBytes(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}})
 	raw[len(raw)-1] ^= 0xff
 
@@ -106,7 +106,7 @@ func TestDecodeChecksumMismatchIsAnAnswer(t *testing.T) {
 }
 
 func TestDecodeDoesNotCloseOnChecksumMismatch(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 	raw := encodeFrameBytes(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}})
 	raw[len(raw)-1] ^= 0xff
 

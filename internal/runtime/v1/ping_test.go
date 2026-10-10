@@ -14,7 +14,7 @@ import (
 )
 
 func TestPingEncodesWithAReservedID(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 	requestRow := row.NewRequestRow("user", nil)
 
 	raw, err := rt.Ping(requestRow, time.Second)
@@ -41,7 +41,7 @@ func TestPingEncodesWithAReservedID(t *testing.T) {
 }
 
 func TestPingSkipsWhilePreviousActive(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 	requestRow := row.NewRequestRow("user", nil)
 
 	first, err := rt.Ping(requestRow, time.Second)
@@ -62,7 +62,7 @@ func TestPingSkipsWhilePreviousActive(t *testing.T) {
 }
 
 func TestPingReplacesExpiredIdlePing(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 	requestRow := row.NewRequestRow("user", nil)
 
 	first, err := rt.Ping(requestRow, 0)
@@ -97,7 +97,7 @@ func TestPingReplacesExpiredIdlePing(t *testing.T) {
 }
 
 func TestPingSkipsOccupiedIDs(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 	requestRow := row.NewRequestRow("user", nil)
 
 	if err := requestRow.Register(1, true); err != nil {
@@ -122,7 +122,7 @@ func TestPingSkipsOccupiedIDs(t *testing.T) {
 }
 
 func TestPingNilRowClosesConnection(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 
 	_, err := rt.Ping(nil, time.Second)
 	if !errors.Is(err, errs.ErrCloseConnection) || !errors.Is(err, errs.ErrNilRequestRow) {
@@ -131,7 +131,7 @@ func TestPingNilRowClosesConnection(t *testing.T) {
 }
 
 func TestPingReleasesIDWhenBuildFails(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(0)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(0)).Build()
 	requestRow := row.NewRequestRow("user", nil)
 
 	_, err := rt.Ping(requestRow, time.Second)

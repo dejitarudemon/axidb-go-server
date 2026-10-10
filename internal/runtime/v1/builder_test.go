@@ -32,8 +32,8 @@ func (s stubCompressor) Decompress(buf []byte) ([]byte, error) {
 	return append([]byte(nil), buf...), nil
 }
 
-func TestNewRuntimerBuilderDefaults(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig()).Build()
+func TestNewRuntimeBuilderDefaults(t *testing.T) {
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig()).Build()
 
 	if !slices.Equal(rt.allowedVersions, []fields.Version{1}) {
 		t.Errorf("versions = %v, want [1]", rt.allowedVersions)
@@ -59,8 +59,8 @@ func TestNewRuntimerBuilderDefaults(t *testing.T) {
 	assertDecodesPing(t, rt)
 }
 
-func TestNewRuntimerBuilderZeroConfig(t *testing.T) {
-	rt := NewRuntimerBuilder(config.RuntimeBuilderConfig{}).Build()
+func TestNewRuntimeBuilderZeroConfig(t *testing.T) {
+	rt := NewRuntimeBuilder(config.RuntimeBuilderConfig{}).Build()
 
 	if len(rt.allowedVersions) != 0 {
 		t.Errorf("versions = %v, want empty", rt.allowedVersions)
@@ -95,14 +95,14 @@ func TestRuntimeBuilderHandlers(t *testing.T) {
 	del := func(Context, fields.Key) error { return sentinel }
 	auth := func(Context, string, [32]byte) (bool, error) { return false, nil }
 
-	rb := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig())
+	rb := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig())
 	if rb.WithHandlerRead(nil).WithHandlerWrite(nil).WithHandlerDelete(nil).WithHandlerAuth(nil) != rb {
 		t.Fatal("WithHandler returned a different builder")
 	}
 
 	assertDefaultHandlers(t, rb.Build())
 
-	rb = NewRuntimerBuilder(*config.NewRuntimeBuilderConfig())
+	rb = NewRuntimeBuilder(*config.NewRuntimeBuilderConfig())
 	rb.WithHandlerRead(read).WithHandlerWrite(write).WithHandlerDelete(del).WithHandlerAuth(auth)
 	rt := rb.Build()
 
@@ -132,7 +132,7 @@ func TestRuntimeBuilderNilHandlerKeepsCustom(t *testing.T) {
 	sentinel := errors.New("sentinel")
 	read := func(Context, fields.Key) (value.V, error) { return nil, sentinel }
 
-	rb := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig()).WithHandlerRead(read).WithHandlerRead(nil)
+	rb := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig()).WithHandlerRead(read).WithHandlerRead(nil)
 	rt := rb.Build()
 
 	if _, err := rt.handlerRead(Context{}, nil); !errors.Is(err, sentinel) {
@@ -141,7 +141,7 @@ func TestRuntimeBuilderNilHandlerKeepsCustom(t *testing.T) {
 }
 
 func TestRuntimeBuilderBuiltHandlersStay(t *testing.T) {
-	rb := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig())
+	rb := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig())
 	rt := rb.Build()
 
 	rb.WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
@@ -163,7 +163,7 @@ func TestRuntimeBuilderVersionsAndCompressors(t *testing.T) {
 		WithAllowedVersions(fields.Version(2), fields.Version(2)).
 		WithCompressors(zstd, again, nil, s2)
 
-	rt := NewRuntimerBuilder(*cfg).Build()
+	rt := NewRuntimeBuilder(*cfg).Build()
 
 	wantVersions := []fields.Version{1, 2}
 	if !slices.Equal(rt.allowedVersions, wantVersions) {
@@ -206,7 +206,7 @@ func TestRuntimeBuilderBodyLimit(t *testing.T) {
 			}
 
 			cfg := config.NewRuntimeBuilderConfig().WithBodyLimit(tt.limit)
-			rt := NewRuntimerBuilder(*cfg).Build()
+			rt := NewRuntimeBuilder(*cfg).Build()
 			if rt.limit != int(tt.limit) {
 				t.Fatalf("limit = %d, want %d", rt.limit, tt.limit)
 			}
@@ -224,7 +224,7 @@ func TestRuntimeBuilderBodyLimit(t *testing.T) {
 func TestRuntimeBuilderDecoderUsesCompressor(t *testing.T) {
 	zstd := stubCompressor{code: fields.Zstd, id: 1}
 	cfg := config.NewRuntimeBuilderConfig().WithCompressors(zstd)
-	rt := NewRuntimerBuilder(*cfg).Build()
+	rt := NewRuntimeBuilder(*cfg).Build()
 
 	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, zstd)
 	got, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
@@ -238,7 +238,7 @@ func TestRuntimeBuilderDecoderUsesCompressor(t *testing.T) {
 }
 
 func TestRuntimeBuilderDecoderRejectsUnknownCompression(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig()).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig()).Build()
 	raw := mustEncodeFrame(t, frame.Frame{RequestID: 1, Body: bodies.Ping{}}, stubCompressor{code: fields.S2})
 
 	_, err := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))

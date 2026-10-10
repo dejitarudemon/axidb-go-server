@@ -18,7 +18,7 @@ func TestSelectCompression(t *testing.T) {
 
 	const threshold = 100
 
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().
 		WithBodyLimit(useHardestCompressionIfBodySizeAtLeast * 2).
 		WithStartUseCompressionAt(threshold).
 		WithCompressors(zstd, s2)).
@@ -115,7 +115,7 @@ func TestSelectCompressionDisabledWhenThresholdAboveLimit(t *testing.T) {
 	zstd := stubCompressor{code: fields.Zstd, id: 1}
 	s2 := stubCompressor{code: fields.S2, id: 2}
 
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().
 		WithBodyLimit(100).
 		WithStartUseCompressionAt(200).
 		WithCompressors(zstd, s2)).
@@ -129,7 +129,7 @@ func TestSelectCompressionDisabledWhenThresholdAboveLimit(t *testing.T) {
 }
 
 func TestSelectCompressionNoRegisteredCompressors(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().
 		WithBodyLimit(1000).
 		WithStartUseCompressionAt(10)).
 		Build()
@@ -141,8 +141,8 @@ func TestSelectCompressionNoRegisteredCompressors(t *testing.T) {
 	}
 }
 
-func TestNewRuntimerBuilderCopiesCompressionThreshold(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithStartUseCompressionAt(42)).Build()
+func TestNewRuntimeBuilderCopiesCompressionThreshold(t *testing.T) {
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithStartUseCompressionAt(42)).Build()
 	if rt.useCompressionAt != 42 {
 		t.Fatalf("useCompressionAt = %d, want 42", rt.useCompressionAt)
 	}

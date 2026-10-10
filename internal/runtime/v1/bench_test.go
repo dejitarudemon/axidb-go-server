@@ -25,7 +25,7 @@ const benchBodyLimit = 1 << 20
 func benchRuntime(b *testing.B, valueByKey map[string]value.V) Runtime {
 	b.Helper()
 
-	return NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(benchBodyLimit)).
+	return NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(benchBodyLimit)).
 		WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
 			return true, nil
 		}).
@@ -204,7 +204,7 @@ func BenchmarkHandleReadCompressed(b *testing.B) {
 	}
 
 	payloadStr := strings.Repeat("x", payload)
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().
 		WithBodyLimit(benchBodyLimit).
 		WithStartUseCompressionAt(1 << 9).
 		WithCompressors(s2, zstd)).
@@ -238,7 +238,7 @@ func BenchmarkHandleReadCompressedZstd(b *testing.B) {
 	}
 
 	payloadStr := strings.Repeat("y", payload)
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().
 		WithBodyLimit(benchBodyLimit).
 		WithStartUseCompressionAt(1 << 9).
 		WithCompressors(s2, zstd)).
@@ -273,7 +273,7 @@ func BenchmarkHandleBatch(b *testing.B) {
 				}
 				name := fmt.Sprintf("n=%d/%s/%s", n, mode, answer)
 				b.Run(name, func(b *testing.B) {
-					rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().
+					rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().
 						WithBodyLimit(benchBodyLimit).
 						WithMaxGoroutinesPerBatch(8)).
 						WithHandlerRead(func(Context, fields.Key) (value.V, error) {

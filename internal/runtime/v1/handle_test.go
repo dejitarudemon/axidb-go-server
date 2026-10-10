@@ -1262,7 +1262,7 @@ func handleRuntimeN(t *testing.T, goroutines int) *storedRuntime {
 
 	stored := &storedRuntime{data: map[string]values.String{}}
 	cfg := config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20).WithMaxGoroutinesPerBatch(goroutines)
-	stored.Runtime = NewRuntimerBuilder(*cfg).
+	stored.Runtime = NewRuntimeBuilder(*cfg).
 		WithHandlerRead(func(ctx Context, key fields.Key) (value.V, error) {
 			stored.note("read", ctx, key)
 			if stored.readErr != nil {
