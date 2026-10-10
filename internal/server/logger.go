@@ -42,7 +42,7 @@ func (s *Server) alertUnprotected() {
 		s.warn(unprotectedTLSMessage)
 		return
 	}
-	fmt.Fprintln(os.Stdout, unprotectedTLSMessage)
+	_, _ = fmt.Fprintln(os.Stdout, unprotectedTLSMessage)
 }
 
 func withTime(args []any) []any {
