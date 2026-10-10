@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"testing"
 	"time"
 )
@@ -68,5 +69,64 @@ func TestServerConfigIgnoresInvalid(t *testing.T) {
 	}
 	if cfg.PingTimeout() != defaultPingTimeout {
 		t.Fatalf("PingTimeout() changed")
+	}
+}
+
+func TestServerConfigTLSDefaultsOff(t *testing.T) {
+	cfg := NewServerConfig()
+	if cfg.TLSConfigured() {
+		t.Fatal("TLSConfigured() = true, want false")
+	}
+	if cfg.TLSConfig() != nil || cfg.TLSCertFile() != "" || cfg.TLSKeyFile() != "" {
+		t.Fatalf("unexpected TLS credentials: %#v %#v %#v", cfg.TLSConfig(), cfg.TLSCertFile(), cfg.TLSKeyFile())
+	}
+}
+
+func TestServerConfigWithTLSConfig(t *testing.T) {
+	tlsCfg := &tls.Config{MinVersion: tls.VersionTLS13}
+	cfg := NewServerConfig().WithTLSConfig(tlsCfg)
+
+	if !cfg.TLSConfigured() {
+		t.Fatal("TLSConfigured() = false, want true")
+	}
+	if cfg.TLSConfig() != tlsCfg {
+		t.Fatal("TLSConfig() pointer mismatch")
+	}
+
+	cfg.WithTLSConfig(nil)
+	if cfg.TLSConfigured() {
+		t.Fatal("TLSConfigured() after clear = true, want false")
+	}
+}
+
+func TestServerConfigWithTLSFiles(t *testing.T) {
+	cfg := NewServerConfig().WithTLSFiles("cert.pem", "key.pem")
+	if !cfg.TLSConfigured() {
+		t.Fatal("TLSConfigured() = false, want true")
+	}
+	if cfg.TLSCertFile() != "cert.pem" || cfg.TLSKeyFile() != "key.pem" {
+		t.Fatalf("files = %q %q", cfg.TLSCertFile(), cfg.TLSKeyFile())
+	}
+
+	cfg.WithTLSFiles("", "key.pem")
+	if cfg.TLSConfigured() || cfg.TLSCertFile() != "" || cfg.TLSKeyFile() != "" {
+		t.Fatal("partial WithTLSFiles should clear file credentials")
+	}
+}
+
+func TestServerConfigTLSConfigPrefersOverFiles(t *testing.T) {
+	tlsCfg := &tls.Config{}
+	cfg := NewServerConfig().
+		WithTLSFiles("cert.pem", "key.pem").
+		WithTLSConfig(tlsCfg)
+
+	if !cfg.TLSConfigured() {
+		t.Fatal("TLSConfigured() = false, want true")
+	}
+	if cfg.TLSConfig() != tlsCfg {
+		t.Fatal("TLSConfig() not set")
+	}
+	if cfg.TLSCertFile() != "cert.pem" {
+		t.Fatal("files should remain set alongside TLSConfig")
 	}
 }
