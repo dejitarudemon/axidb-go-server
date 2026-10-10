@@ -1,6 +1,12 @@
 package server
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"time"
+)
+
+const unprotectedTLSMessage = "server is started without TLS protection"
 
 // info records msg at info level when a logger is set.
 // A nil logger is ignored. args are alternating keys and values.
@@ -27,6 +33,16 @@ func (s *Server) error(msg string, args ...any) {
 	if s.logger != nil {
 		s.logger.Error(msg, withTime(args)...)
 	}
+}
+
+// alertUnprotected reports that the server is listening without TLS.
+// Uses the logger at warn level when set; otherwise writes to stdout.
+func (s *Server) alertUnprotected() {
+	if s.logger != nil {
+		s.warn(unprotectedTLSMessage)
+		return
+	}
+	fmt.Fprintln(os.Stdout, unprotectedTLSMessage)
 }
 
 func withTime(args []any) []any {

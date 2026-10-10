@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"crypto/tls"
+	"time"
+)
 
 const (
 	defaultNetwork      = "tcp4"
@@ -20,11 +23,20 @@ type ServerConfig struct {
 	readTimeout  time.Duration
 	pingInterval time.Duration
 	pingTimeout  time.Duration
+
+	// tls is an optional listener TLS config. When nil and no cert/key files
+	// are set, the server listens in plain TCP.
+	tls *tls.Config
+
+	// tlsCertFile and tlsKeyFile are PEM paths loaded on Start when tls is nil.
+	tlsCertFile string
+	tlsKeyFile  string
 }
 
 // NewServerConfig returns a config with protocol-recommended keepalive defaults
 // (30s idle Ping interval, 100s Ping reply/activity timeout), a 30s read
-// timeout, buffer size 16, and network "tcp4".
+// timeout, buffer size 16, and network "tcp4". TLS is off until
+// [ServerConfig.WithTLSConfig] or [ServerConfig.WithTLSFiles] is used.
 func NewServerConfig() *ServerConfig {
 	return &ServerConfig{
 		network:      defaultNetwork,
@@ -81,6 +93,33 @@ func (c *ServerConfig) WithPingTimeout(d time.Duration) *ServerConfig {
 	return c
 }
 
+// WithTLSConfig sets the TLS configuration used when the server listens.
+//
+// A non-nil cfg enables TLS and takes precedence over
+// [ServerConfig.WithTLSFiles]. The server raises MinVersion to TLS 1.3 if it
+// is lower. A nil cfg clears a previously set TLS config but leaves cert/key
+// file paths unchanged.
+func (c *ServerConfig) WithTLSConfig(cfg *tls.Config) *ServerConfig {
+	c.tls = cfg
+	return c
+}
+
+// WithTLSFiles sets PEM certificate and private-key paths used when no
+// [tls.Config] is set via [ServerConfig.WithTLSConfig].
+//
+// Both paths must be non-empty to enable file-based TLS. If either is empty,
+// the file credentials are cleared. Files are loaded when the server starts.
+func (c *ServerConfig) WithTLSFiles(certFile, keyFile string) *ServerConfig {
+	if certFile == "" || keyFile == "" {
+		c.tlsCertFile = ""
+		c.tlsKeyFile = ""
+		return c
+	}
+	c.tlsCertFile = certFile
+	c.tlsKeyFile = keyFile
+	return c
+}
+
 // Network returns the listen network name.
 func (c *ServerConfig) Network() string { return c.network }
 
@@ -95,3 +134,21 @@ func (c *ServerConfig) PingInterval() time.Duration { return c.pingInterval }
 
 // PingTimeout returns the wait for activity after the first idle Ping.
 func (c *ServerConfig) PingTimeout() time.Duration { return c.pingTimeout }
+
+// TLSConfig returns the TLS config set by [ServerConfig.WithTLSConfig], or nil.
+func (c *ServerConfig) TLSConfig() *tls.Config { return c.tls }
+
+// TLSCertFile returns the PEM certificate path set by [ServerConfig.WithTLSFiles].
+func (c *ServerConfig) TLSCertFile() string { return c.tlsCertFile }
+
+// TLSKeyFile returns the PEM private-key path set by [ServerConfig.WithTLSFiles].
+func (c *ServerConfig) TLSKeyFile() string { return c.tlsKeyFile }
+
+// TLSConfigured reports whether TLS credentials are present (a non-nil
+// [tls.Config] or both cert and key file paths).
+func (c *ServerConfig) TLSConfigured() bool {
+	if c.tls != nil {
+		return true
+	}
+	return c.tlsCertFile != "" && c.tlsKeyFile != ""
+}
