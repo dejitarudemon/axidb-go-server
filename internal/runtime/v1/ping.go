@@ -3,9 +3,9 @@ package runtime_v1
 import (
 	"time"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/builder"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
+	"github.com/dejitarudemon/ignicula-wire/v1/builder"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/errs"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/row"
 )
 
 // Ping encodes a server-initiated idle ping for requestRow.

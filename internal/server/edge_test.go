@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	v0fields "github.com/dejitarudemon/axidb-go-protocol/v0/fields"
+	v0fields "github.com/dejitarudemon/ignicula-wire/v0/fields"
 )
 
 func TestRegistrationTimeoutClosesConnection(t *testing.T) {

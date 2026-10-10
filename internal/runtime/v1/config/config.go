@@ -3,8 +3,8 @@ package config
 import (
 	"slices"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/compressor"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/compressor"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
 )
 
 const (

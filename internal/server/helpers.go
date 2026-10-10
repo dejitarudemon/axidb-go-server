@@ -3,7 +3,7 @@ package server
 import (
 	"fmt"
 
-	fields_v0 "github.com/dejitarudemon/axidb-go-protocol/v0/fields"
+	fields_v0 "github.com/dejitarudemon/ignicula-wire/v0/fields"
 )
 
 func joinAddr(addr string, port uint16) string {

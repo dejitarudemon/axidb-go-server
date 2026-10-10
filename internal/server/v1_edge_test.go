@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
-	v0fields "github.com/dejitarudemon/axidb-go-protocol/v0/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	v1fields "github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
-	runtime_v1 "github.com/dejitarudemon/axidb-go-server/internal/runtime/v1"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
+	v0fields "github.com/dejitarudemon/ignicula-wire/v0/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/body/bodies"
+	v1fields "github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/value"
+	runtime_v1 "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/config"
 )
 
 func TestChecksumMismatchReturnsAnswerAndKeepsConnection(t *testing.T) {

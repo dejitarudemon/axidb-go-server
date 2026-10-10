@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v0/fields"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
-	serverconfig "github.com/dejitarudemon/axidb-go-server/internal/server/config"
+	"github.com/dejitarudemon/ignicula-wire/v0/fields"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/errs"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/row"
+	serverconfig "github.com/dejitarudemon/ignicula-framework/internal/server/config"
 )
 
 func TestIsDisconnect(t *testing.T) {

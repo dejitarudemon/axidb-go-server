@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v0/fields"
+	"github.com/dejitarudemon/ignicula-wire/v0/fields"
 )
 
 // ErrorNilConnection is returned when a connection argument is nil.

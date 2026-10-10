@@ -1,6 +1,6 @@
 package table
 
-import "github.com/dejitarudemon/axidb-go-protocol/v0/fields"
+import "github.com/dejitarudemon/ignicula-wire/v0/fields"
 
 // ConnectionsTableStats is a snapshot returned by [ConnectionsTable.Stats].
 //

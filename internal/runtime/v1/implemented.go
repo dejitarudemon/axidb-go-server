@@ -1,9 +1,9 @@
 package runtime_v1
 
 import (
-	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
+	protocolerrs "github.com/dejitarudemon/ignicula-wire/v1/err/errs"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/value"
 )
 
 // defaultHandlerRead is the stub read handler wired by [NewRuntimeBuilder] so the

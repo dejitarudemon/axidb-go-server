@@ -1,10 +1,10 @@
 package runtime_v1
 
 import (
-	"github.com/dejitarudemon/axidb-go-protocol/v1/body"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/compressor"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
+	"github.com/dejitarudemon/ignicula-wire/v1/body"
+	"github.com/dejitarudemon/ignicula-wire/v1/compressor"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/row"
 )
 
 const (

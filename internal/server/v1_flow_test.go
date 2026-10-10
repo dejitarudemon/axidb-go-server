@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	v0fields "github.com/dejitarudemon/axidb-go-protocol/v0/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	v1fields "github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	v0fields "github.com/dejitarudemon/ignicula-wire/v0/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/body/bodies"
+	v1fields "github.com/dejitarudemon/ignicula-wire/v1/fields"
 )
 
 func TestHelloHandshakeReadKeepsConnection(t *testing.T) {
