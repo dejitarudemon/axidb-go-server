@@ -26,13 +26,16 @@ type RuntimeBuilder struct {
 // the protocol CommandNotImplemented error. Replace them with WithHandler*
 // before Build. The runtime frame-size limit is the config body limit, in
 // bytes. The parallel-batch goroutine limit is
-// [config.RuntimeBuilderConfig.MaxGoroutinesPerBatch].
+// [config.RuntimeBuilderConfig.MaxGoroutinesPerBatch]. Answer compression
+// starts at [config.RuntimeBuilderConfig.StartUseCompressionAt] when
+// compressors are registered.
 func NewRuntimerBuilder(cfg config.RuntimeBuilderConfig) *RuntimeBuilder {
+	compressors := compressorsToRuntimeMap(cfg.Compressors())
 	return &RuntimeBuilder{
 		runtime: Runtime{
 			decoder:             decoder.NewDecoder(cfg.BodyLimit(), cfg.Compressors()),
 			allowedVersions:     cfg.Versions(),
-			allowedCompressions: compressorsToRuntimeMap(cfg.Compressors()),
+			allowedCompressions: compressors,
 
 			handlerRead:   defaultHandlerRead,
 			handlerWrite:  defaultHandlerWrite,
@@ -42,6 +45,7 @@ func NewRuntimerBuilder(cfg config.RuntimeBuilderConfig) *RuntimeBuilder {
 
 			limit:                int(cfg.BodyLimit()),
 			maxGoroutinePerBatch: cfg.MaxGoroutinesPerBatch(),
+			useCompressionAt:     cfg.StartUseCompressionAt(),
 
 			pool: &sync.Pool{
 				New: func() any {

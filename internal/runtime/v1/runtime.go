@@ -16,10 +16,12 @@ import (
 // the read, write, delete, and auth handlers, and the limits copied from
 // [config.RuntimeBuilderConfig]. [Runtime.Decode] reads frames from the stream.
 // [Runtime.Activate] and [Runtime.Handle] take an already decoded frame.
-// Read, write, delete, ping, and batch are handled by Handle. A cancelled
-// context is answered with [protocolerrs.ErrorRequestInterrupted]. A yielded
-// [errs.ErrCloseConnection] means the connection with this client must be
-// closed, including when an error answer cannot be encoded.
+// Read, write, delete, ping, and batch are handled by Handle.
+// [Runtime.selectCompression] picks Zstd for bodies larger than ~160 KiB when
+// available, otherwise any compressor shared with the connection.
+// A cancelled context is answered with [protocolerrs.ErrorRequestInterrupted].
+// A yielded [errs.ErrCloseConnection] means the connection with this client must
+// be closed, including when an error answer cannot be encoded.
 // [errs.ErrLogAndIgnore] means the caller must log the failure, write nothing,
 // and keep the connection. A batch answer that cannot be encoded is yielded as
 // that error.
@@ -44,6 +46,10 @@ type Runtime struct {
 
 	// limit is the maximum encoded frame body size in bytes.
 	limit int
+
+	// useCompressionAt is the body size (bytes) at which answers may start
+	// using compression. See [Runtime.selectCompression].
+	useCompressionAt int
 
 	pool *sync.Pool
 }

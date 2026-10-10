@@ -9,6 +9,7 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/builder"
 	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
 )
 
 // handleRequest yields the encoded answers for body.
@@ -18,7 +19,7 @@ import (
 // and the handler is skipped. A handler error is answered to the client. An encoding
 // failure of that error answer closes the connection. A batch answer that
 // cannot be encoded is yielded as that error.
-func (r Runtime) handleRequest(ctx Context, body body.Body, yield YieldFrameIterator) {
+func (r Runtime) handleRequest(ctx Context, row *row.RequestRow, body body.Body, yield YieldFrameIterator) {
 	if ctx.Err() != nil {
 		r.warnWithCtx(ctx, "request interrupted before handler", "command", body.Command())
 		yield(r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorRequestInterrupted(ctx.RequestID())))
@@ -27,7 +28,7 @@ func (r Runtime) handleRequest(ctx Context, body body.Body, yield YieldFrameIter
 
 	switch body.Command() {
 	case fields.Read:
-		r.handleRead(ctx, body, yield)
+		r.handleRead(ctx, row, body, yield)
 	case fields.Write:
 		r.handleWrite(ctx, body, yield)
 	case fields.Delete:
@@ -36,7 +37,7 @@ func (r Runtime) handleRequest(ctx Context, body body.Body, yield YieldFrameIter
 		r.handlePing(ctx, yield)
 	case fields.Batch:
 		r.infoWithCtx(ctx, "batch", "sequential", body.(bodies.Batch).IsSequentialExecution)
-		r.handleBatch(ctx, body, yield)
+		r.handleBatch(ctx, row, body, yield)
 	default:
 		r.warnWithCtx(ctx, "unsupported command in handler", "command", body.Command())
 		yield(r.writeErrAnswer(ctx.RequestID(), protocolerrs.NewErrorUnsupportedCommand(body.Command())))
@@ -49,7 +50,7 @@ func (r Runtime) handleRequest(ctx Context, body body.Body, yield YieldFrameIter
 // error is answered to the client. When the context is cancelled during the
 // handler, the handler runs to completion and the answer is
 // [protocolerrs.ErrorRequestInterrupted]. On success it yields a read answer frame.
-func (r Runtime) handleRead(ctx Context, body body.Body, yield YieldFrameIterator) {
+func (r Runtime) handleRead(ctx Context, row *row.RequestRow, body body.Body, yield YieldFrameIterator) {
 	rb, _ := body.(bodies.Read)
 	key := fields.Key(rb)
 
@@ -78,7 +79,8 @@ func (r Runtime) handleRead(ctx Context, body body.Body, yield YieldFrameIterato
 	}
 
 	r.infoWithCtx(ctx, "read ok", "key", string(key), "type", value.Type())
-	yield(r.encodeFrame(result, nil))
+
+	yield(r.encodeFrame(result, r.selectCompression(row, result.Body)))
 }
 
 // handleWrite yields the write answer for the key and value in body.
@@ -175,16 +177,16 @@ func (r Runtime) handlePing(ctx Context, yield YieldFrameIterator) {
 // parallel-batch limit. A batch that asks for one answer yields a single
 // combined frame after every nested command has finished. Otherwise it yields
 // one frame per nested command.
-func (r Runtime) handleBatch(ctx Context, body body.Body, yield YieldFrameIterator) {
+func (r Runtime) handleBatch(ctx Context, row *row.RequestRow, body body.Body, yield YieldFrameIterator) {
 	batch, _ := body.(bodies.Batch)
 
 	if batch.IsSequentialExecution {
 		batch.Sort()
-		r.executeBatchSequential(ctx, batch.Requests, batch.IsOneAnswer, batch.InterruptAfterError, yield)
+		r.executeBatchSequential(ctx, row, batch.Requests, batch.IsOneAnswer, batch.InterruptAfterError, yield)
 		return
 	}
 
-	r.executeBatchParallel(ctx, batch.Requests, batch.IsOneAnswer, batch.InterruptAfterError, yield)
+	r.executeBatchParallel(ctx, row, batch.Requests, batch.IsOneAnswer, batch.InterruptAfterError, yield)
 }
 
 // executeBatchSequential runs requests in the order they are passed.
@@ -195,14 +197,14 @@ func (r Runtime) handleBatch(ctx Context, body body.Body, yield YieldFrameIterat
 // next command starts. An encoding failure is yielded as that error, and the
 // remaining commands are not run. A yield that returns false stops the batch
 // the same way. interruptAfterError is applied by [executeRequest].
-func (r Runtime) executeBatchSequential(ctx Context, requests []bodies.Request, isOneAnswer, interruptAfterError bool, yield YieldFrameIterator) {
+func (r Runtime) executeBatchSequential(ctx Context, row *row.RequestRow, requests []bodies.Request, isOneAnswer, interruptAfterError bool, yield YieldFrameIterator) {
 	rBuilder := builder.NewBatchResultsBuilder()
 
 	for _, request := range requests {
 		rBuilder = r.executeRequest(ctx, request, interruptAfterError, rBuilder)
 
 		if !isOneAnswer {
-			encoded, err := r.encodeBatchResult(ctx.RequestID(), rBuilder, nil)
+			encoded, err := r.encodeBatchResult(row, ctx.RequestID(), rBuilder)
 			if err != nil {
 				yield(nil, err)
 				return
@@ -217,7 +219,7 @@ func (r Runtime) executeBatchSequential(ctx Context, requests []bodies.Request, 
 	}
 
 	if isOneAnswer {
-		encoded, err := r.encodeBatchResult(ctx.RequestID(), rBuilder, nil)
+		encoded, err := r.encodeBatchResult(row, ctx.RequestID(), rBuilder)
 		if err != nil {
 			yield(nil, err)
 			return
@@ -235,7 +237,7 @@ func (r Runtime) executeBatchSequential(ctx Context, requests []bodies.Request, 
 // has finished. Otherwise each result is yielded as its own frame as it
 // finishes. An encoding failure is yielded as that error. The call waits for
 // the workers before it returns, including when the iteration stops.
-func (r Runtime) executeBatchParallel(parent Context, requests []bodies.Request, isOneAnswer, interruptAfterError bool, yield YieldFrameIterator) {
+func (r Runtime) executeBatchParallel(parent Context, row *row.RequestRow, requests []bodies.Request, isOneAnswer, interruptAfterError bool, yield YieldFrameIterator) {
 	rMainBuilder := builder.NewBatchResultsBuilder()
 	wg := sync.WaitGroup{}
 	defer wg.Wait()
@@ -275,7 +277,7 @@ func (r Runtime) executeBatchParallel(parent Context, requests []bodies.Request,
 		rLocalBuilder := <-done
 
 		if !isOneAnswer {
-			encoded, err := r.encodeBatchResult(ctx.RequestID(), rLocalBuilder, nil)
+			encoded, err := r.encodeBatchResult(row, ctx.RequestID(), rLocalBuilder)
 			if err != nil {
 				yield(nil, err)
 				return
@@ -292,7 +294,7 @@ func (r Runtime) executeBatchParallel(parent Context, requests []bodies.Request,
 	wg.Wait()
 
 	if isOneAnswer {
-		encoded, err := r.encodeBatchResult(ctx.RequestID(), rMainBuilder, nil)
+		encoded, err := r.encodeBatchResult(row, ctx.RequestID(), rMainBuilder)
 		if err != nil {
 			yield(nil, err)
 			return

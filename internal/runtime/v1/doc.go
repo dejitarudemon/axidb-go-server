@@ -13,6 +13,12 @@
 // [row.RequestRow]; the auth handler runs unless Activate is asked to skip it.
 // Handle yields the encoded answers for read, write, delete, ping, and batch.
 //
+// Outgoing Read and Batch answers may be compressed when compressors are
+// registered, the body is at least [config.RuntimeBuilderConfig.StartUseCompressionAt]
+// bytes, and the connection advertised support in the handshake. Bodies larger
+// than ~160 KiB prefer Zstd when available; otherwise any shared compressor is
+// used. Handshake, Ping, Write, Delete, and error answers stay uncompressed.
+//
 // A batch yields one frame per nested command as it finishes, or one combined
 // answer when the batch asks for a single answer. Sequential execution runs
 // nested commands in number order. Otherwise they run concurrently, up to

@@ -51,6 +51,10 @@ func TestNewRuntimerBuilderDefaults(t *testing.T) {
 		t.Errorf("goroutines = %d, want %d", rt.maxGoroutinePerBatch, config.NewRuntimeBuilderConfig().MaxGoroutinesPerBatch())
 	}
 
+	if rt.useCompressionAt != config.NewRuntimeBuilderConfig().StartUseCompressionAt() {
+		t.Errorf("useCompressionAt = %d, want %d", rt.useCompressionAt, config.NewRuntimeBuilderConfig().StartUseCompressionAt())
+	}
+
 	assertDefaultHandlers(t, rt)
 	assertDecodesPing(t, rt)
 }
