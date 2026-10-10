@@ -1,3 +1,5 @@
+![Ignicula](./docs/ignicula-badge.svg)
+
 [![CI](https://github.com/dejitarudemon/ignicula-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/dejitarudemon/ignicula-framework/actions/workflows/ci.yml)
 ![coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fdejitarudemon%2Fb71fd6149421abe8196d4e6b1e88a93f%2Fraw%2Fcoverage.json)
 [![Go Reference](https://pkg.go.dev/badge/github.com/dejitarudemon/ignicula-framework.svg)](https://pkg.go.dev/github.com/dejitarudemon/ignicula-framework)

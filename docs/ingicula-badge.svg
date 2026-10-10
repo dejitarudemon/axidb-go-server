@@ -1,0 +1,23 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="76" viewBox="0 0 360 76" role="img" aria-label="Ignicula: A small light in the dark">
+  <title>Ignicula</title>
+  <rect x="1" y="1" width="358" height="74" rx="9" fill="#111820" stroke="#536575" stroke-width="1.5"></rect>
+
+  <g fill="none" stroke="#536575" stroke-width="1.5">
+    <path d="M38 12 57 23V45L38 56 19 45V23Z"></path>
+  </g>
+  <g fill="none" stroke="#354755" stroke-width="1">
+    <path d="M38 12V56M19 23 57 45M57 23 19 45"></path>
+  </g>
+
+  <circle cx="38" cy="34" r="13" fill="#D18B37" opacity=".12"></circle>
+  <circle cx="38" cy="34" r="8" fill="#D18B37" opacity=".2"></circle>
+  <circle cx="38" cy="34" r="4" fill="#FFD99A"></circle>
+
+  <path d="M38 23V19M49 34H53M38 45V49M27 34H23" fill="none" stroke="#FFD99A" stroke-width="1.2" stroke-linecap="round"></path>
+
+  <path d="M72 16V60" stroke="#536575" opacity=".7"></path>
+
+  <text x="88" y="37" font-family="monospace" font-size="21" font-weight="600" letter-spacing="2.1" fill="#E6E8E8">IGNICULA</text>
+  <text x="89" y="53" font-family="monospace" font-size="8" letter-spacing="2" fill="#A4B0BA">A SMALL LIGHT IN THE DARK</text>
+</svg>
