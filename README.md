@@ -1,9 +1,12 @@
 [![CI](https://github.com/dejitarudemon/axidb-go-server/actions/workflows/ci.yml/badge.svg)](https://github.com/dejitarudemon/axidb-go-server/actions/workflows/ci.yml)
+![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/dejitarudemon/b71fd6149421abe8196d4e6b1e88a93f/raw/coverage.json)
+[![Go Reference](https://pkg.go.dev/badge/github.com/dejitarudemon/axidb-go-server.svg)](https://pkg.go.dev/github.com/dejitarudemon/axidb-go-server)
+[![Release](https://img.shields.io/github/v/tag/dejitarudemon/axidb-go-server?label=release)](https://github.com/dejitarudemon/axidb-go-server/releases)
 [![License: MIT](https://img.shields.io/github/license/dejitarudemon/axidb-go-server)](LICENSE)
 
 # axidb-go-server
 
-TCP server for the AxiDB protocol: Hello (v0), Handshake, and working version 1 with your Auth / Read / Write / Delete handlers.
+A Go framework for AxiDB servers. Bring your storage. Ship a binary protocol API.
 
 [English](#english) · [Русский](#русский)
 
@@ -11,82 +14,76 @@ TCP server for the AxiDB protocol: Hello (v0), Handshake, and working version 1 
 
 ## English
 
-A Go server on top of [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol). It owns the socket, session table, idle Ping, and answer writer. Storage and access policy stay in handlers you register on the v1 runtime.
+**axidb-go-server** is a framework on top of [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol): connections, version negotiation, auth, then Read / Write / Delete / Ping / Batch - with your handlers in the middle.
 
-Packages currently live under `internal/` (import from code inside this module).
+You own the data model and access rules. The framework owns the transport: sessions, keep-alive, answers on the wire, optional TLS. Register handlers and run.
+
+Built for typed values, multiplexing by request id, compression when you need it, and a clear path from Hello to your first successful Read.
 
 ### Docs
 
 - [How it works](docs/how-it-works.en.md)
-- [Tutorials](docs/tutorial.en.md)
+- [Tutorials](docs/tutorial.en.md) - start here for a minimal server and config
 - [Benchmarks](docs/benchmarks.en.md)
 
-### Requirements
+Wire format and client-side framing: [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol).
+
+### Install
 
 Go 1.27.1 or newer.
 
-### Quick start
-
-```go
-rt := runtime_v1.NewRuntimeBuilder(*rconfig.NewRuntimeBuilderConfig().WithBodyLimit(1<<20)).
-    WithHandlerAuth(func(runtime_v1.Context, string, [32]byte) (bool, error) { return true, nil }).
-    WithHandlerRead(/* ... */).
-    Build()
-
-s := server.NewServer(sconfig.NewServerConfig(), nil)
-_ = s.RegisterV1Runtime(&rt)
-_ = s.Start("127.0.0.1", 4747)
-defer s.Close()
+```bash
+go get github.com/dejitarudemon/axidb-go-server@latest
 ```
 
-Full walkthrough: [tutorials](docs/tutorial.en.md).
+### Get started
 
-### Test / bench
+Step-by-step setup, handlers, TLS, and compression: [tutorials](docs/tutorial.en.md).
+
+### Tests and benchmarks
 
 ```bash
-export GOMODCACHE="${GOMODCACHE:-$(go env GOPATH)/pkg/mod}"
-go test -race ./...
+go test ./...
 go test -bench=. -benchmem ./internal/server/ ./internal/runtime/v1/
 ```
+
+Load scenarios and reference numbers: [benchmarks](docs/benchmarks.en.md).
 
 ---
 
 ## Русский
 
-Go-сервер поверх [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol). Держит сокет, таблицу сессий, idle Ping и writer ответов. Хранилище и доступ живут в хендлерах, которые вы вешаете на runtime v1.
+**axidb-go-server** - фреймворк поверх [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol): соединения, согласование версии, auth, затем Read / Write / Delete / Ping / Batch - а посередине ваши хендлеры.
 
-Пакеты пока в `internal/` (импорт из кода внутри этого модуля).
+Данные и правила доступа - ваши. Транспорт - у фреймворка: сессии, keep-alive, ответы на проводе, при необходимости TLS. Зарегистрировали хендлеры - запускаете.
+
+Рассчитан на типизированные значения, мультиплексирование по request id, сжатие по желанию и понятный путь от Hello до первого успешного Read.
 
 ### Документация
 
 - [Как это работает](docs/how-it-works.md)
-- [Туториалы](docs/tutorial.md)
+- [Туториалы](docs/tutorial.md) - отсюда минимальный сервер и конфиг
 - [Бенчмарки](docs/benchmarks.md)
 
-### Требования
+Формат кадров и клиентский framing: [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol).
 
-Go 1.27.1 или новее.
+### Установка
 
-### Быстрый старт
-
-```go
-rt := runtime_v1.NewRuntimeBuilder(*rconfig.NewRuntimeBuilderConfig().WithBodyLimit(1<<20)).
-    WithHandlerAuth(func(runtime_v1.Context, string, [32]byte) (bool, error) { return true, nil }).
-    WithHandlerRead(/* ... */).
-    Build()
-
-s := server.NewServer(sconfig.NewServerConfig(), nil)
-_ = s.RegisterV1Runtime(&rt)
-_ = s.Start("127.0.0.1", 4747)
-defer s.Close()
-```
-
-Подробно: [туториалы](docs/tutorial.md).
-
-### Тесты / бенчи
+Нужен Go 1.27.1 или новее.
 
 ```bash
-export GOMODCACHE="${GOMODCACHE:-$(go env GOPATH)/pkg/mod}"
-go test -race ./...
+go get github.com/dejitarudemon/axidb-go-server@latest
+```
+
+### С чего начать
+
+Пошаговый запуск, хендлеры, TLS и сжатие: [туториалы](docs/tutorial.md).
+
+### Тесты и бенчмарки
+
+```bash
+go test ./...
 go test -bench=. -benchmem ./internal/server/ ./internal/runtime/v1/
 ```
+
+Нагрузка и референсные цифры: [бенчмарки](docs/benchmarks.md).

@@ -4,7 +4,7 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 Public server API: build a runtime, attach handlers, start listening. Internals are in [how-it-works](how-it-works.en.md). Wire frames are in the [protocol tutorials](https://github.com/dejitarudemon/axidb-go-protocol/blob/main/docs/tutorial.en.md).
 
-Packages live under `internal/`: examples are for code inside this module (`cmd/`, tests).
+Packages live under `internal/`: examples are for code inside this module.
 
 ---
 

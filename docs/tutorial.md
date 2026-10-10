@@ -4,7 +4,7 @@
 
 Публичный API сервера: собрать runtime, повесить хендлеры, запустить. Как устроено внутри - в [how-it-works](how-it-works.md). Кадры на проводе - в [туториалах протокола](https://github.com/dejitarudemon/axidb-go-protocol/blob/main/docs/tutorial.md).
 
-Пакеты в `internal/`: примеры для кода внутри этого модуля (`cmd/`, тесты).
+Пакеты в `internal/`: примеры для кода внутри этого модуля.
 
 ---
 
