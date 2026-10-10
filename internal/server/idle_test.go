@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	v1decoder "github.com/dejitarudemon/axidb-go-protocol/v1/decoder"
 	v1fields "github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 )
 
@@ -115,7 +114,7 @@ func TestIdlePingDoesNotFlood(t *testing.T) {
 		if err := conn.SetReadDeadline(time.Now().Add(remaining)); err != nil {
 			t.Fatalf("SetReadDeadline() = %v", err)
 		}
-		got, err := v1decoder.NewDecoder(v1TestLimit, nil).DecodeFrame(conn.r)
+		got, err := testV1Decoder.DecodeFrame(conn.r)
 		if err != nil {
 			if isTimeout(err) {
 				break
@@ -211,7 +210,7 @@ func TestIdlePingIDExpiresWithoutAnswer(t *testing.T) {
 	if err := conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond)); err != nil {
 		t.Fatalf("SetReadDeadline() = %v", err)
 	}
-	if _, err := v1decoder.NewDecoder(v1TestLimit, nil).DecodeFrame(conn.r); err == nil {
+	if _, err := testV1Decoder.DecodeFrame(conn.r); err == nil {
 		t.Fatal("unexpected frame before idle-ping ttl expiry")
 	} else if !isTimeout(err) {
 		t.Fatalf("DecodeFrame() = %v, want timeout", err)

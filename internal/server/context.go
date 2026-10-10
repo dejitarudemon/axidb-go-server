@@ -13,7 +13,6 @@ type connContext struct {
 	cancel context.CancelFunc
 
 	reader *bufio.Reader
-	writer *bufio.Writer
 	conn   *Connection
 
 	answers chan []byte
@@ -23,7 +22,6 @@ func newConnContext(parent context.Context, conn *Connection, answers chan []byt
 	return connContext{
 		Context: parent,
 		reader:  bufio.NewReader(conn),
-		writer:  bufio.NewWriter(conn),
 		conn:    conn,
 		answers: answers,
 	}

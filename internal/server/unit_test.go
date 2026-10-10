@@ -130,6 +130,41 @@ func TestWriteLoopSkipsEmptyAndStopsOnCancel(t *testing.T) {
 	wg.Wait()
 }
 
+func TestWriteLoopCoalescesQueuedAnswers(t *testing.T) {
+	s := NewServer(testConfig(t), nil)
+	client, server := net.Pipe()
+	t.Cleanup(func() {
+		_ = client.Close()
+		_ = server.Close()
+	})
+
+	answers := make(chan []byte, 4)
+	ctx, cancel := newConnContextWithCancel(context.Background(), newConnection(server), answers)
+	t.Cleanup(cancel)
+
+	var wg sync.WaitGroup
+	wg.Go(func() { s.writeLoop(ctx) })
+
+	want := []byte{1, 2, 3, 4, 5, 6}
+	answers <- []byte{1, 2}
+	answers <- []byte{3, 4}
+	answers <- []byte{5, 6}
+
+	got := make([]byte, len(want))
+	if err := client.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		t.Fatalf("SetReadDeadline() = %v", err)
+	}
+	if _, err := io.ReadFull(client, got); err != nil {
+		t.Fatalf("ReadFull() = %v", err)
+	}
+	if string(got) != string(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+
+	cancel()
+	wg.Wait()
+}
+
 func TestWriteLoopWriteErrorCloses(t *testing.T) {
 	log := &memLogger{}
 	s := NewServer(testConfig(t), log)

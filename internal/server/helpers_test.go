@@ -25,6 +25,15 @@ import (
 
 const v1TestLimit = 1 << 20
 
+// Shared protocol helpers for tests/benchmarks. Decoder and FrameBuilder hold
+// only config (limit / compressor map); reusing them avoids counting
+// NewDecoder / NewFrameBuilder in -benchmem.
+var (
+	testV0Decoder = v0decoder.NewDecoder()
+	testV1Decoder = v1decoder.NewDecoder(v1TestLimit, nil)
+	testV1Builder = v1builder.NewFrameBuilder(v1TestLimit)
+)
+
 func testConfig(t testing.TB) *serverconfig.ServerConfig {
 	t.Helper()
 	return serverconfig.NewServerConfig().
@@ -166,8 +175,7 @@ func readHelloAnswer(t testing.TB, conn *testConn) {
 		t.Fatalf("SetReadDeadline() = %v", err)
 	}
 
-	dec := v0decoder.NewDecoder()
-	if _, err := dec.DecodeFrame(conn.r); err != nil {
+	if _, err := testV0Decoder.DecodeFrame(conn.r); err != nil {
 		t.Fatalf("hello DecodeFrame() = %v", err)
 	}
 }
@@ -185,7 +193,7 @@ func encodeV1Frame(t testing.TB, f v1frame.Frame) []byte {
 func encodeHandshake(t testing.TB, login string, hash [32]byte) []byte {
 	t.Helper()
 
-	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewHandshake(login, hash, nil)
+	f, err := testV1Builder.NewHandshake(login, hash, nil)
 	if err != nil {
 		t.Fatalf("NewHandshake() = %v", err)
 	}
@@ -195,7 +203,7 @@ func encodeHandshake(t testing.TB, login string, hash [32]byte) []byte {
 func encodeClientPing(t testing.TB, id v1fields.RequestID) []byte {
 	t.Helper()
 
-	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewPing(id)
+	f, err := testV1Builder.NewPing(id)
 	if err != nil {
 		t.Fatalf("NewPing() = %v", err)
 	}
@@ -205,7 +213,7 @@ func encodeClientPing(t testing.TB, id v1fields.RequestID) []byte {
 func encodePingAnswer(t testing.TB, id v1fields.RequestID) []byte {
 	t.Helper()
 
-	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewPingAnswer(id)
+	f, err := testV1Builder.NewPingAnswer(id)
 	if err != nil {
 		t.Fatalf("NewPingAnswer() = %v", err)
 	}
@@ -215,7 +223,7 @@ func encodePingAnswer(t testing.TB, id v1fields.RequestID) []byte {
 func encodeRead(t testing.TB, id v1fields.RequestID, key string) []byte {
 	t.Helper()
 
-	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewRead(id, v1fields.Key(key))
+	f, err := testV1Builder.NewRead(id, v1fields.Key(key))
 	if err != nil {
 		t.Fatalf("NewRead() = %v", err)
 	}
@@ -225,7 +233,7 @@ func encodeRead(t testing.TB, id v1fields.RequestID, key string) []byte {
 func encodeWrite(t testing.TB, id v1fields.RequestID, key, value string) []byte {
 	t.Helper()
 
-	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewWrite(id, v1fields.Key(key), values.String(value))
+	f, err := testV1Builder.NewWrite(id, v1fields.Key(key), values.String(value))
 	if err != nil {
 		t.Fatalf("NewWrite() = %v", err)
 	}
@@ -235,7 +243,7 @@ func encodeWrite(t testing.TB, id v1fields.RequestID, key, value string) []byte 
 func encodeDelete(t testing.TB, id v1fields.RequestID, key string) []byte {
 	t.Helper()
 
-	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewDelete(id, v1fields.Key(key))
+	f, err := testV1Builder.NewDelete(id, v1fields.Key(key))
 	if err != nil {
 		t.Fatalf("NewDelete() = %v", err)
 	}
@@ -252,7 +260,7 @@ func encodeBatchReads(t testing.TB, id v1fields.RequestID, n int, sequential, on
 		batch.AddRead(v1fields.Key("k"))
 	}
 
-	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewBatch(id, *batch)
+	f, err := testV1Builder.NewBatch(id, *batch)
 	if err != nil {
 		t.Fatalf("NewBatch() = %v", err)
 	}
@@ -266,7 +274,7 @@ func readV1Frame(t testing.TB, conn *testConn, d time.Duration) v1frame.Frame {
 		t.Fatalf("SetReadDeadline() = %v", err)
 	}
 
-	got, err := v1decoder.NewDecoder(v1TestLimit, nil).DecodeFrame(conn.r)
+	got, err := testV1Decoder.DecodeFrame(conn.r)
 	if err != nil {
 		t.Fatalf("DecodeFrame() = %v", err)
 	}
