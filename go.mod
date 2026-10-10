@@ -7,4 +7,7 @@ require (
 	github.com/google/uuid v1.6.0
 )
 
-require bursavich.dev/crc v0.1.3 // indirect
+require (
+	bursavich.dev/crc v0.1.3 // indirect
+	github.com/klauspost/compress v1.20.0 // indirect
+)

@@ -17,6 +17,7 @@ import (
 	v1decoder "github.com/dejitarudemon/axidb-go-protocol/v1/decoder"
 	v1fields "github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	v1frame "github.com/dejitarudemon/axidb-go-protocol/v1/frame"
+	"github.com/dejitarudemon/axidb-go-protocol/v1/value/values"
 	runtime_v1 "github.com/dejitarudemon/axidb-go-server/internal/runtime/v1"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
 	serverconfig "github.com/dejitarudemon/axidb-go-server/internal/server/config"
@@ -24,7 +25,7 @@ import (
 
 const v1TestLimit = 1 << 20
 
-func testConfig(t *testing.T) *serverconfig.ServerConfig {
+func testConfig(t testing.TB) *serverconfig.ServerConfig {
 	t.Helper()
 	return serverconfig.NewServerConfig().
 		WithNetwork("tcp").
@@ -34,7 +35,7 @@ func testConfig(t *testing.T) *serverconfig.ServerConfig {
 		WithBufferSize(4)
 }
 
-func startTestServer(t *testing.T, cfg *serverconfig.ServerConfig, rt *runtime_v1.Runtime) *Server {
+func startTestServer(t testing.TB, cfg *serverconfig.ServerConfig, rt *runtime_v1.Runtime) *Server {
 	t.Helper()
 
 	if cfg == nil {
@@ -56,7 +57,7 @@ func startTestServer(t *testing.T, cfg *serverconfig.ServerConfig, rt *runtime_v
 	return s
 }
 
-func testRuntime(t *testing.T) *runtime_v1.Runtime {
+func testRuntime(t testing.TB) *runtime_v1.Runtime {
 	t.Helper()
 
 	rt := NewRuntimerBuilderForTest(t)
@@ -64,7 +65,7 @@ func testRuntime(t *testing.T) *runtime_v1.Runtime {
 }
 
 // NewRuntimerBuilderForTest builds a v1 runtime with accepting auth for server tests.
-func NewRuntimerBuilderForTest(t *testing.T) runtime_v1.Runtime {
+func NewRuntimerBuilderForTest(t testing.TB) runtime_v1.Runtime {
 	t.Helper()
 
 	return runtime_v1.NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(v1TestLimit)).
@@ -74,7 +75,7 @@ func NewRuntimerBuilderForTest(t *testing.T) runtime_v1.Runtime {
 		Build()
 }
 
-func rejectAuthRuntime(t *testing.T) *runtime_v1.Runtime {
+func rejectAuthRuntime(t testing.TB) *runtime_v1.Runtime {
 	t.Helper()
 
 	rt := runtime_v1.NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(v1TestLimit)).
@@ -90,7 +91,7 @@ type testConn struct {
 	r *bufio.Reader
 }
 
-func dialServer(t *testing.T, s *Server) *testConn {
+func dialServer(t testing.TB, s *Server) *testConn {
 	t.Helper()
 
 	if s.listener == nil {
@@ -105,7 +106,7 @@ func dialServer(t *testing.T, s *Server) *testConn {
 	return &testConn{Conn: conn, r: bufio.NewReader(conn)}
 }
 
-func encodeV0Hello(t *testing.T, versions []v0fields.Version) []byte {
+func encodeV0Hello(t testing.TB, versions []v0fields.Version) []byte {
 	t.Helper()
 
 	frame, err := v0builder.NewFrameBuilder(v0Limit).NewHello(versions)
@@ -121,7 +122,7 @@ func encodeV0Hello(t *testing.T, versions []v0fields.Version) []byte {
 	return buf.Bytes()
 }
 
-func writeAll(t *testing.T, w io.Writer, raw []byte) {
+func writeAll(t testing.TB, w io.Writer, raw []byte) {
 	t.Helper()
 
 	n, err := w.Write(raw)
@@ -133,7 +134,7 @@ func writeAll(t *testing.T, w io.Writer, raw []byte) {
 	}
 }
 
-func expectConnClosed(t *testing.T, conn *testConn, wait time.Duration) {
+func expectConnClosed(t testing.TB, conn *testConn, wait time.Duration) {
 	t.Helper()
 
 	deadline := time.Now().Add(wait)
@@ -158,7 +159,7 @@ func expectConnClosed(t *testing.T, conn *testConn, wait time.Duration) {
 	t.Fatalf("connection still open after %v (%d chunks still arriving)", wait, chunks)
 }
 
-func readHelloAnswer(t *testing.T, conn *testConn) {
+func readHelloAnswer(t testing.TB, conn *testConn) {
 	t.Helper()
 
 	if err := conn.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
@@ -171,7 +172,7 @@ func readHelloAnswer(t *testing.T, conn *testConn) {
 	}
 }
 
-func encodeV1Frame(t *testing.T, f v1frame.Frame) []byte {
+func encodeV1Frame(t testing.TB, f v1frame.Frame) []byte {
 	t.Helper()
 
 	var buf buffer.Slice
@@ -181,7 +182,7 @@ func encodeV1Frame(t *testing.T, f v1frame.Frame) []byte {
 	return buf.Bytes()
 }
 
-func encodeHandshake(t *testing.T, login string, hash [32]byte) []byte {
+func encodeHandshake(t testing.TB, login string, hash [32]byte) []byte {
 	t.Helper()
 
 	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewHandshake(login, hash, nil)
@@ -191,7 +192,7 @@ func encodeHandshake(t *testing.T, login string, hash [32]byte) []byte {
 	return encodeV1Frame(t, f)
 }
 
-func encodeClientPing(t *testing.T, id v1fields.RequestID) []byte {
+func encodeClientPing(t testing.TB, id v1fields.RequestID) []byte {
 	t.Helper()
 
 	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewPing(id)
@@ -201,7 +202,7 @@ func encodeClientPing(t *testing.T, id v1fields.RequestID) []byte {
 	return encodeV1Frame(t, f)
 }
 
-func encodePingAnswer(t *testing.T, id v1fields.RequestID) []byte {
+func encodePingAnswer(t testing.TB, id v1fields.RequestID) []byte {
 	t.Helper()
 
 	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewPingAnswer(id)
@@ -211,7 +212,7 @@ func encodePingAnswer(t *testing.T, id v1fields.RequestID) []byte {
 	return encodeV1Frame(t, f)
 }
 
-func encodeRead(t *testing.T, id v1fields.RequestID, key string) []byte {
+func encodeRead(t testing.TB, id v1fields.RequestID, key string) []byte {
 	t.Helper()
 
 	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewRead(id, v1fields.Key(key))
@@ -221,7 +222,44 @@ func encodeRead(t *testing.T, id v1fields.RequestID, key string) []byte {
 	return encodeV1Frame(t, f)
 }
 
-func readV1Frame(t *testing.T, conn *testConn, d time.Duration) v1frame.Frame {
+func encodeWrite(t testing.TB, id v1fields.RequestID, key, value string) []byte {
+	t.Helper()
+
+	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewWrite(id, v1fields.Key(key), values.String(value))
+	if err != nil {
+		t.Fatalf("NewWrite() = %v", err)
+	}
+	return encodeV1Frame(t, f)
+}
+
+func encodeDelete(t testing.TB, id v1fields.RequestID, key string) []byte {
+	t.Helper()
+
+	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewDelete(id, v1fields.Key(key))
+	if err != nil {
+		t.Fatalf("NewDelete() = %v", err)
+	}
+	return encodeV1Frame(t, f)
+}
+
+func encodeBatchReads(t testing.TB, id v1fields.RequestID, n int, sequential, oneAnswer bool) []byte {
+	t.Helper()
+
+	batch := v1builder.NewBatchRequestsBuilder().
+		SequentialExecution(sequential).
+		OneAnswer(oneAnswer)
+	for i := 0; i < n; i++ {
+		batch.AddRead(v1fields.Key("k"))
+	}
+
+	f, err := v1builder.NewFrameBuilder(v1TestLimit).NewBatch(id, *batch)
+	if err != nil {
+		t.Fatalf("NewBatch() = %v", err)
+	}
+	return encodeV1Frame(t, f)
+}
+
+func readV1Frame(t testing.TB, conn *testConn, d time.Duration) v1frame.Frame {
 	t.Helper()
 
 	if err := conn.SetReadDeadline(time.Now().Add(d)); err != nil {
@@ -237,7 +275,7 @@ func readV1Frame(t *testing.T, conn *testConn, d time.Duration) v1frame.Frame {
 
 // readV1IgnoringServerPings reads the next non-Ping frame.
 // Server idle Pings are skipped so tests can sync on application traffic.
-func readV1IgnoringServerPings(t *testing.T, conn *testConn, d time.Duration) v1frame.Frame {
+func readV1IgnoringServerPings(t testing.TB, conn *testConn, d time.Duration) v1frame.Frame {
 	t.Helper()
 
 	deadline := time.Now().Add(d)
@@ -256,7 +294,7 @@ func readV1IgnoringServerPings(t *testing.T, conn *testConn, d time.Duration) v1
 	return v1frame.Frame{}
 }
 
-func registerAndActivate(t *testing.T, conn *testConn) {
+func registerAndActivate(t testing.TB, conn *testConn) {
 	t.Helper()
 
 	writeAll(t, conn, encodeV0Hello(t, []v0fields.Version{1}))
@@ -269,7 +307,7 @@ func registerAndActivate(t *testing.T, conn *testConn) {
 	}
 }
 
-func errorAnswerCode(t *testing.T, b body.Body) v1fields.Error {
+func errorAnswerCode(t testing.TB, b body.Body) v1fields.Error {
 	t.Helper()
 
 	ans, ok := b.(bodies.ErrorAnswer)
