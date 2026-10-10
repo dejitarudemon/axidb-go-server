@@ -1,7 +1,7 @@
 bursavich.dev/crc v0.1.3 h1:3EpbYDGuDaq3JALRqVAOXKVgN2iKlV2FaEHZoSWt2Bc=
 bursavich.dev/crc v0.1.3/go.mod h1:MzxhcOeIp+LyKnzau6AvgZMIzQzckYLEB5M1tFjPNp8=
-github.com/dejitarudemon/ignicula-wire v1.1.1-0.20261010154611-ece064f34d85 h1:V/degbCqBR6DNm0a5pIVJ7YvhUzURDy0TNzKBvpWdbE=
-github.com/dejitarudemon/ignicula-wire v1.1.1-0.20261010154611-ece064f34d85/go.mod h1:tHAb6XkQ9WTpfLd5h04LGMJblDzpEWdHNXOcxaAaiAg=
+github.com/dejitarudemon/ignicula-wire v1.1.1 h1:U0tHguFnyFzviZ6CGawxyMucqzBmJdjkMqMQqz1BqKk=
+github.com/dejitarudemon/ignicula-wire v1.1.1/go.mod h1:tHAb6XkQ9WTpfLd5h04LGMJblDzpEWdHNXOcxaAaiAg=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/klauspost/compress v1.20.0 h1:a3C1ke2ohxFymNlb2HWAHjDeKCI90scRskErZkR0ezA=
