@@ -8,8 +8,8 @@
 
 | Набор | Пакет | Объект измерения |
 | --- | --- | --- |
-| Server | `internal/server` | TCP + accept/read/write loops + runtime |
-| Runtime | `internal/runtime/v1` | Decode / Activate / Handle / Ping без сети |
+| Server | `server` | TCP + accept/read/write loops + runtime |
+| Runtime | `runtime/v1` | Decode / Activate / Handle / Ping без сети |
 
 Абсолютные `ns/op` между наборами напрямую не сравнивают: server включает стек ОС и горутины соединения.
 
@@ -23,11 +23,11 @@
 export GOMODCACHE="${GOMODCACHE:-$(go env GOPATH)/pkg/mod}"
 # при необходимости: GOPROXY=off
 
-go test -bench=. -benchmem ./internal/server/
-go test -bench=. -benchmem ./internal/runtime/v1/
+go test -bench=. -benchmem ./server/
+go test -bench=. -benchmem ./runtime/v1/
 
 # нагрузка: фиксированное число клиентов + p50/p99
-go test -bench=ServerLoad -benchmem -count=5 -benchtime=200ms ./internal/server/
+go test -bench=ServerLoad -benchmem -count=5 -benchtime=200ms ./server/
 ```
 
 | Флаг | Назначение |

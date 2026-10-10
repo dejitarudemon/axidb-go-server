@@ -46,7 +46,7 @@ Step-by-step setup, handlers, TLS, and compression: [tutorials](docs/tutorial.en
 
 ```bash
 go test ./...
-go test -bench=. -benchmem ./internal/server/ ./internal/runtime/v1/
+go test -bench=. -benchmem ./server/ ./runtime/v1/
 ```
 
 Load scenarios and reference numbers: [benchmarks](docs/benchmarks.en.md).
@@ -85,7 +85,7 @@ go get github.com/dejitarudemon/ignicula-framework@latest
 
 ```bash
 go test ./...
-go test -bench=. -benchmem ./internal/server/ ./internal/runtime/v1/
+go test -bench=. -benchmem ./server/ ./runtime/v1/
 ```
 
 Нагрузка и референсные цифры: [бенчмарки](docs/benchmarks.md).

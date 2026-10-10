@@ -8,8 +8,8 @@ Two independent suites:
 
 | Suite | Package | What is measured |
 | --- | --- | --- |
-| Server | `internal/server` | TCP + accept/read/write loops + runtime |
-| Runtime | `internal/runtime/v1` | Decode / Activate / Handle / Ping without the network |
+| Server | `server` | TCP + accept/read/write loops + runtime |
+| Runtime | `runtime/v1` | Decode / Activate / Handle / Ping without the network |
 
 Do not compare absolute `ns/op` across suites: the server path includes the OS stack and connection goroutines.
 
@@ -23,11 +23,11 @@ Charts below use the reference tables in §3 (single run). They need a Mermaid r
 export GOMODCACHE="${GOMODCACHE:-$(go env GOPATH)/pkg/mod}"
 # if needed: GOPROXY=off
 
-go test -bench=. -benchmem ./internal/server/
-go test -bench=. -benchmem ./internal/runtime/v1/
+go test -bench=. -benchmem ./server/
+go test -bench=. -benchmem ./runtime/v1/
 
 # load: fixed client count + p50/p99
-go test -bench=ServerLoad -benchmem -count=5 -benchtime=200ms ./internal/server/
+go test -bench=ServerLoad -benchmem -count=5 -benchtime=200ms ./server/
 ```
 
 | Flag | Purpose |

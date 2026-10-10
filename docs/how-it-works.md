@@ -6,7 +6,7 @@
 
 Примеры публичного API - в [туториалах](tutorial.md). Измерения - в [бенчмарках](benchmarks.md). Формат кадров - в документации [ignicula-wire](https://github.com/dejitarudemon/ignicula-wire).
 
-Пакеты сервера расположены в `internal/` и предназначены для использования из кода этого модуля.
+Пакеты сервера расположены у корня модуля и импортируются из других модулей.
 
 ---
 
@@ -39,13 +39,13 @@ Activate / Get             Handle / Ping
 
 | Компонент | Пакет | Ответственность |
 | --- | --- | --- |
-| `Server` | `internal/server` | Listen/accept, peek версии, маршрутизация, idle, запись ответов, закрытие |
-| `ServerConfig` | `internal/server/config` | Сеть, буфер ответов, таймауты, TLS |
-| `ConnectionsTable` | `internal/table` | Состояние соединения по версиям: зарегистрирован / granted / activated + `RegistrationRow` |
-| `Runtime` | `internal/runtime/v1` | Decode, Activate, Handle, Ping; вызов хендлеров; кодирование ответов |
-| `RuntimeBuilder` / config | `internal/runtime/v1`, `.../config` | Сборка runtime: лимиты, компрессоры, хендлеры |
-| `RequestRow` | `internal/runtime/v1/row` | На активированной сессии: занятые `RequestID`, компрессоры, idle-ping слот |
-| `Logger` | `internal/logger` | Опциональный журнал; `nil` - без логов (кроме предупреждения о plain TCP в stdout) |
+| `Server` | `server` | Listen/accept, peek версии, маршрутизация, idle, запись ответов, закрытие |
+| `ServerConfig` | `server/config` | Сеть, буфер ответов, таймауты, TLS |
+| `ConnectionsTable` | `table` | Состояние соединения по версиям: зарегистрирован / granted / activated + `RegistrationRow` |
+| `Runtime` | `runtime/v1` | Decode, Activate, Handle, Ping; вызов хендлеров; кодирование ответов |
+| `RuntimeBuilder` / config | `runtime/v1`, `.../config` | Сборка runtime: лимиты, компрессоры, хендлеры |
+| `RequestRow` | `runtime/v1/row` | На активированной сессии: занятые `RequestID`, компрессоры, idle-ping слот |
+| `Logger` | `logger` | Опциональный журнал; `nil` - без логов (кроме предупреждения о plain TCP в stdout) |
 
 Граница ответственности: после `peekVersion` и выбора ветки версии сервер вызывает методы конкретного runtime и получает либо закодированные байты, либо ошибку-политику. Сервер не разбирает тело кадра и не вызывает методы `RequestRow` напрямую (кроме передачи opaque `RegistrationRow` в адаптер `runtimes`).
 
@@ -214,7 +214,7 @@ table.Get
 | После первого кадра в батче прошло `flushAfter` | flush частичного батча - верхняя граница latency |
 | Батч пуст | таймер не вооружён (idle-соединение не тикает) |
 
-Таймер нужен: без него хвост из 1..(cap-1) кадров ждёт следующего ответа неограниченно долго. Сразу flush’ить каждый кадр - отказ от coalesce при нескольких outstanding на одном conn (pipeline / параллельные `serveV1Frame`). Константы - в `internal/server/writer.go`.
+Таймер нужен: без него хвост из 1..(cap-1) кадров ждёт следующего ответа неограниченно долго. Сразу flush’ить каждый кадр - отказ от coalesce при нескольких outstanding на одном conn (pipeline / параллельные `serveV1Frame`). Константы - в `server/writer.go`.
 
 ---
 

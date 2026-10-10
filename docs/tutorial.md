@@ -4,7 +4,7 @@
 
 Публичный API сервера: собрать runtime, повесить хендлеры, запустить. Как устроено внутри - в [how-it-works](how-it-works.md). Кадры на проводе - в [туториалах протокола](https://github.com/dejitarudemon/ignicula-wire/blob/main/docs/tutorial.md).
 
-Пакеты в `internal/`: примеры для кода внутри этого модуля.
+Импорты идут от корня модуля (без префикса `internal/`).
 
 ---
 
@@ -21,11 +21,11 @@ import (
 
 	"github.com/dejitarudemon/ignicula-wire/v1/fields"
 	"github.com/dejitarudemon/ignicula-wire/v1/value"
-	"github.com/dejitarudemon/ignicula-framework/internal/logger/implemented"
-	runtime_v1 "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1"
-	rconfig "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/config"
-	"github.com/dejitarudemon/ignicula-framework/internal/server"
-	sconfig "github.com/dejitarudemon/ignicula-framework/internal/server/config"
+	"github.com/dejitarudemon/ignicula-framework/logger/implemented"
+	runtime_v1 "github.com/dejitarudemon/ignicula-framework/runtime/v1"
+	rconfig "github.com/dejitarudemon/ignicula-framework/runtime/v1/config"
+	"github.com/dejitarudemon/ignicula-framework/server"
+	sconfig "github.com/dejitarudemon/ignicula-framework/server/config"
 )
 
 type store struct {
@@ -198,4 +198,4 @@ cfg := sconfig.NewServerConfig().
 | Warn without TLS                   | Нет `WithTLS*` - ожидаемо                         |
 
 
-Бенчмарки: [benchmarks.md](benchmarks.md). Паттерны клиента в тестах: `internal/server/helpers_test.go`, `v1_flow_test.go`.
+Бенчмарки: [benchmarks.md](benchmarks.md). Паттерны клиента в тестах: `server/helpers_test.go`, `v1_flow_test.go`.

@@ -6,7 +6,7 @@ This document describes `ignicula-framework`: component roles, process / connect
 
 Public API examples are in the [tutorials](tutorial.en.md). Numbers are in [benchmarks](benchmarks.en.md). Frame layout is in [ignicula-wire](https://github.com/dejitarudemon/ignicula-wire).
 
-Server packages live under `internal/` and are meant for use from code inside this module.
+Server packages live at the module root and are importable from other modules.
 
 ---
 
@@ -39,13 +39,13 @@ Activate / Get             Handle / Ping
 
 | Component | Package | Responsibility |
 | --- | --- | --- |
-| `Server` | `internal/server` | Listen/accept, version peek, routing, idle, writing answers, close |
-| `ServerConfig` | `internal/server/config` | Network, answer buffer, timeouts, TLS |
-| `ConnectionsTable` | `internal/table` | Per-connection version state: registered / granted / activated + `RegistrationRow` |
-| `Runtime` | `internal/runtime/v1` | Decode, Activate, Handle, Ping; handler calls; answer encoding |
-| `RuntimeBuilder` / config | `internal/runtime/v1`, `.../config` | Runtime assembly: limits, compressors, handlers |
-| `RequestRow` | `internal/runtime/v1/row` | On an activated session: live `RequestID`s, compressors, idle-ping slot |
-| `Logger` | `internal/logger` | Optional log; `nil` is quiet (except the plain-TCP warning on stdout) |
+| `Server` | `server` | Listen/accept, version peek, routing, idle, writing answers, close |
+| `ServerConfig` | `server/config` | Network, answer buffer, timeouts, TLS |
+| `ConnectionsTable` | `table` | Per-connection version state: registered / granted / activated + `RegistrationRow` |
+| `Runtime` | `runtime/v1` | Decode, Activate, Handle, Ping; handler calls; answer encoding |
+| `RuntimeBuilder` / config | `runtime/v1`, `.../config` | Runtime assembly: limits, compressors, handlers |
+| `RequestRow` | `runtime/v1/row` | On an activated session: live `RequestID`s, compressors, idle-ping slot |
+| `Logger` | `logger` | Optional log; `nil` is quiet (except the plain-TCP warning on stdout) |
 
 Boundary: after `peekVersion` and version routing, the server calls concrete runtime methods and receives either encoded bytes or a policy error. It does not parse frame bodies or call `RequestRow` methods directly (aside from passing an opaque `RegistrationRow` into the `runtimes` adapter).
 
@@ -214,7 +214,7 @@ Coalesce policy (production):
 | `flushAfter` elapsed after the first frame in the batch | flush a partial batch - latency ceiling |
 | Batch empty | timer is not armed (idle connections do not tick) |
 
-The timer is required: without it a tail of 1..(cap-1) frames can wait for the next answer indefinitely. Flushing every frame immediately gives up coalesce when several answers are outstanding on one conn (pipeline / parallel `serveV1Frame`). Constants live in `internal/server/writer.go`.
+The timer is required: without it a tail of 1..(cap-1) frames can wait for the next answer indefinitely. Flushing every frame immediately gives up coalesce when several answers are outstanding on one conn (pipeline / parallel `serveV1Frame`). Constants live in `server/writer.go`.
 
 ---
 

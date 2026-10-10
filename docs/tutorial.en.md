@@ -4,7 +4,7 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 Public server API: build a runtime, attach handlers, start listening. Internals are in [how-it-works](how-it-works.en.md). Wire frames are in the [protocol tutorials](https://github.com/dejitarudemon/ignicula-wire/blob/main/docs/tutorial.en.md).
 
-Packages live under `internal/`: examples are for code inside this module.
+Import paths are under the module root (no `internal/` prefix).
 
 ---
 
@@ -21,11 +21,11 @@ import (
 
 	"github.com/dejitarudemon/ignicula-wire/v1/fields"
 	"github.com/dejitarudemon/ignicula-wire/v1/value"
-	"github.com/dejitarudemon/ignicula-framework/internal/logger/implemented"
-	runtime_v1 "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1"
-	rconfig "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/config"
-	"github.com/dejitarudemon/ignicula-framework/internal/server"
-	sconfig "github.com/dejitarudemon/ignicula-framework/internal/server/config"
+	"github.com/dejitarudemon/ignicula-framework/logger/implemented"
+	runtime_v1 "github.com/dejitarudemon/ignicula-framework/runtime/v1"
+	rconfig "github.com/dejitarudemon/ignicula-framework/runtime/v1/config"
+	"github.com/dejitarudemon/ignicula-framework/server"
+	sconfig "github.com/dejitarudemon/ignicula-framework/server/config"
 )
 
 type store struct {
@@ -182,4 +182,4 @@ Empty paths / `WithTLSConfig(nil)` / non-positive durations clear or ignore the 
 | Request Conflict | Unique non-zero `RequestID`s for live requests |
 | Warn without TLS | No `WithTLS*` - expected |
 
-Benchmarks: [benchmarks.en.md](benchmarks.en.md). Client patterns in tests: `internal/server/helpers_test.go`, `v1_flow_test.go`.
+Benchmarks: [benchmarks.en.md](benchmarks.en.md). Client patterns in tests: `server/helpers_test.go`, `v1_flow_test.go`.
