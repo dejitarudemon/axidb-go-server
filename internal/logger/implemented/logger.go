@@ -3,7 +3,7 @@ package implemented
 import (
 	"log/slog"
 
-	"github.com/dejitarudemon/axidb-go-server/internal/logger"
+	"github.com/dejitarudemon/ignicula-framework/internal/logger"
 )
 
 // Logger forwards [logger.Logger] calls to a [slog.Logger].

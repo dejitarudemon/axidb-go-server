@@ -3,12 +3,12 @@ package runtime_v1
 import (
 	"context"
 
-	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/answer"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
+	protocolerrs "github.com/dejitarudemon/ignicula-wire/v1/err/errs"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/frame"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/errs"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/answer"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/row"
 )
 
 // Handle returns an iterator of encoded answers for an already decoded request.

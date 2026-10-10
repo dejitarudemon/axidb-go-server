@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v0/fields"
+	"github.com/dejitarudemon/ignicula-wire/v0/fields"
 )
 
 type stubRow struct {

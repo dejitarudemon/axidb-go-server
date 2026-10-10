@@ -3,7 +3,7 @@ package runtime_v1
 import (
 	"sync"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
 )
 
 // executionState records whether a batch has already failed and the traceback

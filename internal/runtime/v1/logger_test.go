@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
+	"github.com/dejitarudemon/ignicula-wire/v1/body/bodies"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/frame"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/config"
 )
 
 type memLogger struct {

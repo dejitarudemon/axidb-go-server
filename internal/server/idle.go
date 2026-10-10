@@ -6,8 +6,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
-	"github.com/dejitarudemon/axidb-go-server/internal/table"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/errs"
+	"github.com/dejitarudemon/ignicula-framework/internal/table"
 )
 
 // nextReadDeadline returns when the next read should wake for keepalive or

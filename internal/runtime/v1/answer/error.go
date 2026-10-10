@@ -3,7 +3,7 @@ package answer
 import (
 	"fmt"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
 )
 
 // ErrorUnregisteredAnswer is returned when an answer arrives for a request id

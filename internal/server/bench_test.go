@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	v1fields "github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/value/values"
-	runtime_v1 "github.com/dejitarudemon/axidb-go-server/internal/runtime/v1"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
-	serverconfig "github.com/dejitarudemon/axidb-go-server/internal/server/config"
+	"github.com/dejitarudemon/ignicula-wire/v1/body/bodies"
+	v1fields "github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/value"
+	"github.com/dejitarudemon/ignicula-wire/v1/value/values"
+	runtime_v1 "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/config"
+	serverconfig "github.com/dejitarudemon/ignicula-framework/internal/server/config"
 )
 
 // benchConfig disables idle Ping interference during long runs.

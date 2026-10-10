@@ -2,7 +2,7 @@
 
 # Туториалы
 
-Публичный API сервера: собрать runtime, повесить хендлеры, запустить. Как устроено внутри - в [how-it-works](how-it-works.md). Кадры на проводе - в [туториалах протокола](https://github.com/dejitarudemon/axidb-go-protocol/blob/main/docs/tutorial.md).
+Публичный API сервера: собрать runtime, повесить хендлеры, запустить. Как устроено внутри - в [how-it-works](how-it-works.md). Кадры на проводе - в [туториалах протокола](https://github.com/dejitarudemon/ignicula-wire/blob/main/docs/tutorial.md).
 
 Пакеты в `internal/`: примеры для кода внутри этого модуля.
 
@@ -19,13 +19,13 @@ import (
 	"os/signal"
 	"sync"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
-	"github.com/dejitarudemon/axidb-go-server/internal/logger/implemented"
-	runtime_v1 "github.com/dejitarudemon/axidb-go-server/internal/runtime/v1"
-	rconfig "github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
-	"github.com/dejitarudemon/axidb-go-server/internal/server"
-	sconfig "github.com/dejitarudemon/axidb-go-server/internal/server/config"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/value"
+	"github.com/dejitarudemon/ignicula-framework/internal/logger/implemented"
+	runtime_v1 "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1"
+	rconfig "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/config"
+	"github.com/dejitarudemon/ignicula-framework/internal/server"
+	sconfig "github.com/dejitarudemon/ignicula-framework/internal/server/config"
 )
 
 type store struct {
@@ -167,7 +167,7 @@ cfg := sconfig.NewServerConfig().
 	WithReadTimeout(30 * time.Second).
 	WithPingInterval(30 * time.Second).
 	WithPingTimeout(100 * time.Second).
-	WithTLSFiles("/etc/axidb/cert.pem", "/etc/axidb/key.pem")
+	WithTLSFiles("/etc/ignicula/cert.pem", "/etc/ignicula/key.pem")
 	// или WithTLSConfig(&tls.Config{Certificates: []tls.Certificate{cert}})
 ```
 

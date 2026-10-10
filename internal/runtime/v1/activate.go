@@ -3,12 +3,12 @@ package runtime_v1
 import (
 	"context"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/builder"
-	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
+	"github.com/dejitarudemon/ignicula-wire/v1/body/bodies"
+	"github.com/dejitarudemon/ignicula-wire/v1/builder"
+	protocolerrs "github.com/dejitarudemon/ignicula-wire/v1/err/errs"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/frame"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/row"
 )
 
 // Activate authenticates an already decoded handshake request.

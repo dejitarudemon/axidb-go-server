@@ -2,7 +2,7 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 # Tutorials
 
-Public server API: build a runtime, attach handlers, start listening. Internals are in [how-it-works](how-it-works.en.md). Wire frames are in the [protocol tutorials](https://github.com/dejitarudemon/axidb-go-protocol/blob/main/docs/tutorial.en.md).
+Public server API: build a runtime, attach handlers, start listening. Internals are in [how-it-works](how-it-works.en.md). Wire frames are in the [protocol tutorials](https://github.com/dejitarudemon/ignicula-wire/blob/main/docs/tutorial.en.md).
 
 Packages live under `internal/`: examples are for code inside this module.
 
@@ -19,13 +19,13 @@ import (
 	"os/signal"
 	"sync"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
-	"github.com/dejitarudemon/axidb-go-server/internal/logger/implemented"
-	runtime_v1 "github.com/dejitarudemon/axidb-go-server/internal/runtime/v1"
-	rconfig "github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
-	"github.com/dejitarudemon/axidb-go-server/internal/server"
-	sconfig "github.com/dejitarudemon/axidb-go-server/internal/server/config"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/value"
+	"github.com/dejitarudemon/ignicula-framework/internal/logger/implemented"
+	runtime_v1 "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1"
+	rconfig "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/config"
+	"github.com/dejitarudemon/ignicula-framework/internal/server"
+	sconfig "github.com/dejitarudemon/ignicula-framework/internal/server/config"
 )
 
 type store struct {
@@ -157,7 +157,7 @@ cfg := sconfig.NewServerConfig().
 	WithReadTimeout(30 * time.Second).
 	WithPingInterval(30 * time.Second).
 	WithPingTimeout(100 * time.Second).
-	WithTLSFiles("/etc/axidb/cert.pem", "/etc/axidb/key.pem")
+	WithTLSFiles("/etc/ignicula/cert.pem", "/etc/ignicula/key.pem")
 	// or WithTLSConfig(&tls.Config{Certificates: []tls.Certificate{cert}})
 ```
 

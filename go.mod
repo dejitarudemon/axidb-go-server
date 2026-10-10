@@ -1,8 +1,8 @@
-module github.com/dejitarudemon/axidb-go-server
+module github.com/dejitarudemon/ignicula-framework
 
 go 1.27.1
 
-require github.com/dejitarudemon/axidb-go-protocol v1.1.0
+require github.com/dejitarudemon/ignicula-wire v1.1.1
 
 require (
 	bursavich.dev/crc v0.1.3 // indirect

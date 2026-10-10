@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/dejitarudemon/axidb-go-protocol/v0/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/buffer"
+	"github.com/dejitarudemon/ignicula-wire/v0/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/buffer"
 )
 
 // register handles the first v0 Hello on a new connection.

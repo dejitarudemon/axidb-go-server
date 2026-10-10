@@ -3,8 +3,8 @@ package runtime_v1
 import (
 	"bufio"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
+	"github.com/dejitarudemon/ignicula-wire/v1/frame"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/errs"
 )
 
 // Decode reads one frame from reader.

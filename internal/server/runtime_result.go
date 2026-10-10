@@ -3,7 +3,7 @@ package server
 import (
 	"errors"
 
-	runtimeerrs "github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
+	runtimeerrs "github.com/dejitarudemon/ignicula-framework/internal/runtime/errs"
 )
 
 // respondRuntimeError logs err, enqueues answer when present, and closes the

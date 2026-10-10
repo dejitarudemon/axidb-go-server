@@ -3,11 +3,11 @@ package runtime_v1
 import (
 	"sync"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/compressor"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/decoder"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
-	"github.com/dejitarudemon/axidb-go-server/internal/logger"
+	"github.com/dejitarudemon/ignicula-wire/v1/compressor"
+	"github.com/dejitarudemon/ignicula-wire/v1/decoder"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/value"
+	"github.com/dejitarudemon/ignicula-framework/internal/logger"
 )
 
 // Runtime is the v1 server runtime assembled by [RuntimeBuilder].

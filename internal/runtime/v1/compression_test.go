@@ -4,12 +4,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/compressor"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/value/values"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
+	"github.com/dejitarudemon/ignicula-wire/v1/body/bodies"
+	"github.com/dejitarudemon/ignicula-wire/v1/compressor"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/value/values"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/config"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/row"
 )
 
 func TestSelectCompression(t *testing.T) {

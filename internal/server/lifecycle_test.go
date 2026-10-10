@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	serverconfig "github.com/dejitarudemon/axidb-go-server/internal/server/config"
+	serverconfig "github.com/dejitarudemon/ignicula-framework/internal/server/config"
 )
 
 func TestNewServerNilConfigUsesDefaults(t *testing.T) {

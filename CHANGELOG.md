@@ -2,7 +2,7 @@
 
 ## 0.8.0 - 2026-10-10
 
-First tagged release of the Go server framework for AxiDB.
+First tagged release of the Go server framework for Ignicula.
 
 Added:
 

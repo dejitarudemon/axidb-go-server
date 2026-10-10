@@ -10,13 +10,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v0/builder"
-	"github.com/dejitarudemon/axidb-go-protocol/v0/decoder"
-	"github.com/dejitarudemon/axidb-go-protocol/v0/fields"
-	"github.com/dejitarudemon/axidb-go-server/internal/logger"
-	runtime_v1 "github.com/dejitarudemon/axidb-go-server/internal/runtime/v1"
-	"github.com/dejitarudemon/axidb-go-server/internal/server/config"
-	"github.com/dejitarudemon/axidb-go-server/internal/table"
+	"github.com/dejitarudemon/ignicula-wire/v0/builder"
+	"github.com/dejitarudemon/ignicula-wire/v0/decoder"
+	"github.com/dejitarudemon/ignicula-wire/v0/fields"
+	"github.com/dejitarudemon/ignicula-framework/internal/logger"
+	runtime_v1 "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1"
+	"github.com/dejitarudemon/ignicula-framework/internal/server/config"
+	"github.com/dejitarudemon/ignicula-framework/internal/table"
 )
 
 const (

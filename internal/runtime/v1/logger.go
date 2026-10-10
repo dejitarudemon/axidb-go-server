@@ -3,7 +3,7 @@ package runtime_v1
 import (
 	"time"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
 )
 
 // info records msg at info level when a logger is set.

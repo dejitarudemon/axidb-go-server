@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/config"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
+	"github.com/dejitarudemon/ignicula-wire/v1/body/bodies"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/errs"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/config"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/row"
 )
 
 func TestPingEncodesWithAReservedID(t *testing.T) {

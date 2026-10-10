@@ -1,12 +1,12 @@
-[![CI](https://github.com/dejitarudemon/axidb-go-server/actions/workflows/ci.yml/badge.svg)](https://github.com/dejitarudemon/axidb-go-server/actions/workflows/ci.yml)
+[![CI](https://github.com/dejitarudemon/ignicula-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/dejitarudemon/ignicula-framework/actions/workflows/ci.yml)
 ![coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fdejitarudemon%2Fb71fd6149421abe8196d4e6b1e88a93f%2Fraw%2Fcoverage.json)
-[![Go Reference](https://pkg.go.dev/badge/github.com/dejitarudemon/axidb-go-server.svg)](https://pkg.go.dev/github.com/dejitarudemon/axidb-go-server)
-[![Release](https://img.shields.io/github/v/tag/dejitarudemon/axidb-go-server?label=release)](https://github.com/dejitarudemon/axidb-go-server/releases)
-[![License: MIT](https://img.shields.io/github/license/dejitarudemon/axidb-go-server)](LICENSE)
+[![Go Reference](https://pkg.go.dev/badge/github.com/dejitarudemon/ignicula-framework.svg)](https://pkg.go.dev/github.com/dejitarudemon/ignicula-framework)
+[![Release](https://img.shields.io/github/v/tag/dejitarudemon/ignicula-framework?label=release)](https://github.com/dejitarudemon/ignicula-framework/releases)
+[![License: MIT](https://img.shields.io/github/license/dejitarudemon/ignicula-framework)](LICENSE)
 
-# axidb-go-server
+# ignicula-framework
 
-A Go framework for AxiDB servers. Bring your storage. Ship a binary protocol API.
+A Go framework for Ignicula servers. Bring your storage. Ship a binary protocol API.
 
 [English](#english) · [Русский](#русский)
 
@@ -14,7 +14,7 @@ A Go framework for AxiDB servers. Bring your storage. Ship a binary protocol API
 
 ## English
 
-**axidb-go-server** is a framework on top of [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol): connections, version negotiation, auth, then Read / Write / Delete / Ping / Batch - with your handlers in the middle.
+**ignicula-framework** is a framework on top of [ignicula-wire](https://github.com/dejitarudemon/ignicula-wire): connections, version negotiation, auth, then Read / Write / Delete / Ping / Batch - with your handlers in the middle.
 
 You own the data model and access rules. The framework owns the transport: sessions, keep-alive, answers on the wire, optional TLS. Register handlers and run.
 
@@ -26,14 +26,14 @@ Built for typed values, multiplexing by request id, compression when you need it
 - [Tutorials](docs/tutorial.en.md) - start here for a minimal server and config
 - [Benchmarks](docs/benchmarks.en.md)
 
-Wire format and client-side framing: [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol).
+Wire format and client-side framing: [ignicula-wire](https://github.com/dejitarudemon/ignicula-wire).
 
 ### Install
 
 Go 1.27.1 or newer.
 
 ```bash
-go get github.com/dejitarudemon/axidb-go-server@latest
+go get github.com/dejitarudemon/ignicula-framework@latest
 ```
 
 ### Get started
@@ -53,7 +53,7 @@ Load scenarios and reference numbers: [benchmarks](docs/benchmarks.en.md).
 
 ## Русский
 
-**axidb-go-server** - фреймворк поверх [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol): соединения, согласование версии, auth, затем Read / Write / Delete / Ping / Batch - а посередине ваши хендлеры.
+**ignicula-framework** - фреймворк поверх [ignicula-wire](https://github.com/dejitarudemon/ignicula-wire): соединения, согласование версии, auth, затем Read / Write / Delete / Ping / Batch - а посередине ваши хендлеры.
 
 Данные и правила доступа - ваши. Транспорт - у фреймворка: сессии, keep-alive, ответы на проводе, при необходимости TLS. Зарегистрировали хендлеры - запускаете.
 
@@ -65,14 +65,14 @@ Load scenarios and reference numbers: [benchmarks](docs/benchmarks.en.md).
 - [Туториалы](docs/tutorial.md) - отсюда минимальный сервер и конфиг
 - [Бенчмарки](docs/benchmarks.md)
 
-Формат кадров и клиентский framing: [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol).
+Формат кадров и клиентский framing: [ignicula-wire](https://github.com/dejitarudemon/ignicula-wire).
 
 ### Установка
 
 Нужен Go 1.27.1 или новее.
 
 ```bash
-go get github.com/dejitarudemon/axidb-go-server@latest
+go get github.com/dejitarudemon/ignicula-framework@latest
 ```
 
 ### С чего начать

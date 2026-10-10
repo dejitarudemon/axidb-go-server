@@ -3,7 +3,7 @@ package runtime_v1
 import (
 	"context"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
 )
 
 // Context is the per-request context passed to runtime handlers.

@@ -2,9 +2,9 @@ Language: [Русский](how-it-works.md) · [English](how-it-works.en.md)
 
 # How it works
 
-This document describes `axidb-go-server`: component roles, process / connection / request lifecycles (by function calls), the error contract, and idle Ping / compression policy.
+This document describes `ignicula-framework`: component roles, process / connection / request lifecycles (by function calls), the error contract, and idle Ping / compression policy.
 
-Public API examples are in the [tutorials](tutorial.en.md). Numbers are in [benchmarks](benchmarks.en.md). Frame layout is in [axidb-go-protocol](https://github.com/dejitarudemon/axidb-go-protocol).
+Public API examples are in the [tutorials](tutorial.en.md). Numbers are in [benchmarks](benchmarks.en.md). Frame layout is in [ignicula-wire](https://github.com/dejitarudemon/ignicula-wire).
 
 Server packages live under `internal/` and are meant for use from code inside this module.
 

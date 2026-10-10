@@ -3,10 +3,10 @@ package server
 import (
 	"errors"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v0/fields"
-	frame_v1 "github.com/dejitarudemon/axidb-go-protocol/v1/frame"
-	runtimeerrs "github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
-	"github.com/dejitarudemon/axidb-go-server/internal/table"
+	"github.com/dejitarudemon/ignicula-wire/v0/fields"
+	frame_v1 "github.com/dejitarudemon/ignicula-wire/v1/frame"
+	runtimeerrs "github.com/dejitarudemon/ignicula-framework/internal/runtime/errs"
+	"github.com/dejitarudemon/ignicula-framework/internal/table"
 )
 
 const versionV1 = fields.Version(1)

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	protocolerrs "github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
-	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	protocolerrs "github.com/dejitarudemon/ignicula-wire/v1/err/errs"
+	"github.com/dejitarudemon/ignicula-wire/v1/fields"
 )
 
 func TestDefaultHandlerRead(t *testing.T) {

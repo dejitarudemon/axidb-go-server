@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	v1fields "github.com/dejitarudemon/axidb-go-protocol/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/body/bodies"
+	v1fields "github.com/dejitarudemon/ignicula-wire/v1/fields"
 )
 
 func TestStartWithoutTLSWarnsLogger(t *testing.T) {

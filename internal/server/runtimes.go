@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dejitarudemon/axidb-go-protocol/v0/fields"
-	frame_v1 "github.com/dejitarudemon/axidb-go-protocol/v1/frame"
-	runtime_v1 "github.com/dejitarudemon/axidb-go-server/internal/runtime/v1"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
-	"github.com/dejitarudemon/axidb-go-server/internal/table"
+	"github.com/dejitarudemon/ignicula-wire/v0/fields"
+	frame_v1 "github.com/dejitarudemon/ignicula-wire/v1/frame"
+	runtime_v1 "github.com/dejitarudemon/ignicula-framework/internal/runtime/v1"
+	"github.com/dejitarudemon/ignicula-framework/internal/runtime/v1/row"
+	"github.com/dejitarudemon/ignicula-framework/internal/table"
 )
 
 // runtimes holds the protocol runtimes installed on the server.
