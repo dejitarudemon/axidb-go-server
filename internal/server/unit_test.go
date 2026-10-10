@@ -63,20 +63,20 @@ func TestLoggerWarnAndErrorAddTime(t *testing.T) {
 
 func TestRuntimesPingErrors(t *testing.T) {
 	r := runtimes{}
-	if _, err := r.ping(fields.Version(1), nil); err == nil {
+	if _, err := r.ping(fields.Version(1), nil, time.Second); err == nil {
 		t.Fatal("ping with nil v1 runtime: want error")
 	}
-	if _, err := r.ping(fields.Version(99), nil); err == nil {
+	if _, err := r.ping(fields.Version(99), nil, time.Second); err == nil {
 		t.Fatal("ping unsupported version: want error")
 	}
 
 	rt := testRuntime(t)
 	r.v1 = rt
-	if _, err := r.ping(fields.Version(1), fakeRegRow{}); err == nil {
+	if _, err := r.ping(fields.Version(1), fakeRegRow{}, time.Second); err == nil {
 		t.Fatal("ping with wrong row type: want error")
 	}
 
-	raw, err := r.ping(fields.Version(1), row.NewRequestRow("u", nil))
+	raw, err := r.ping(fields.Version(1), row.NewRequestRow("u", nil), time.Second)
 	if err != nil {
 		t.Fatalf("ping() = %v", err)
 	}

@@ -42,8 +42,10 @@ func (s *Server) nextReadDeadline(ctx connContext) time.Time {
 // After registration, a connection with no active version is closed. Otherwise
 // at most one idle Ping is sent per idle cycle on the minimum active version.
 // Further Pings wait until client activity clears the outstanding Ping via
-// [Connection.noteActivity]. If [Server.pingTimeout] elapses since that Ping
-// without any client frame, the connection is closed.
+// [Connection.noteActivity]. The runtime refuses a second Ping while the
+// previous idle-ping request id is still within [Server.pingTimeout].
+// If [Server.pingTimeout] elapses since that Ping without any client frame,
+// the connection is closed.
 func (s *Server) onReadIdle(ctx connContext) (closed bool) {
 	if !s.table.IsRegistered(ctx.conn) {
 		s.warn("registration timed out", "source", peer(ctx))
@@ -79,13 +81,17 @@ func (s *Server) onReadIdle(ctx connContext) (closed bool) {
 		return true
 	}
 
-	raw, err := s.runtimes.ping(version, reg)
+	raw, err := s.runtimes.ping(version, reg, s.pingTimeout)
 	if err != nil {
 		s.error("failed to build idle ping", "source", peer(ctx), "version", version, "error", err)
 		if errors.Is(err, errs.ErrCloseConnection) {
 			s.closeConn(ctx)
 			return true
 		}
+		return false
+	}
+	if len(raw) == 0 {
+		// Runtime still holds a non-expired idle-ping reservation.
 		return false
 	}
 

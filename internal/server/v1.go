@@ -6,7 +6,6 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v0/fields"
 	frame_v1 "github.com/dejitarudemon/axidb-go-protocol/v1/frame"
 	runtimeerrs "github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
-	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
 	"github.com/dejitarudemon/axidb-go-server/internal/table"
 )
 
@@ -64,14 +63,14 @@ func (s *Server) serveV1Frame(ctx connContext, request frame_v1.Frame) {
 		return
 	}
 
-	requestRow, ok := reg.(*row.RequestRow)
-	if !ok {
-		s.error("unexpected registration row type", "source", peer(ctx), "type", reg)
+	iter, err := s.runtimes.handle(versionV1, ctx.Context, request, reg)
+	if err != nil {
+		s.error("failed to handle frame", "source", peer(ctx), "error", err, "version", versionV1)
 		s.closeConn(ctx)
 		return
 	}
 
-	for answer, err := range s.runtimes.v1.Handle(ctx.Context, request, requestRow) {
+	for answer, err := range iter {
 		if stop := s.deliverV1Answer(ctx, answer, err); stop {
 			return
 		}

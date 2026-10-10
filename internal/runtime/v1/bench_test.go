@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/buffer"
@@ -175,14 +176,13 @@ func BenchmarkRuntimePing(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		raw, err := rt.Ping(requestRow)
+		raw, err := rt.Ping(requestRow, time.Second)
 		if err != nil {
 			b.Fatalf("Ping() = %v", err)
 		}
 		if len(raw) == 0 {
 			b.Fatal("empty ping")
 		}
-		// Release reserved id so the row does not fill up across iterations.
 		got, decErr := rt.decoder.DecodeFrame(bufio.NewReader(bytes.NewReader(raw)))
 		if decErr != nil {
 			b.Fatalf("decode ping = %v", decErr)
