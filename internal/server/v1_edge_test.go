@@ -65,7 +65,7 @@ func TestUnregisteredPingAnswerIsIgnored(t *testing.T) {
 
 func TestDuplicateRequestIDConflicts(t *testing.T) {
 	gate := make(chan struct{})
-	rt := runtime_v1.NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(v1TestLimit)).
+	rt := runtime_v1.NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(v1TestLimit)).
 		WithHandlerAuth(func(runtime_v1.Context, string, [32]byte) (bool, error) {
 			return true, nil
 		}).
@@ -149,7 +149,7 @@ func TestTruncatedV1FrameClosesConnection(t *testing.T) {
 
 func TestBodyLimitExceededClosesConnection(t *testing.T) {
 	// Limit fits a tiny handshake but not a long Read key.
-	rt := runtime_v1.NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(128)).
+	rt := runtime_v1.NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(128)).
 		WithHandlerAuth(func(runtime_v1.Context, string, [32]byte) (bool, error) {
 			return true, nil
 		}).

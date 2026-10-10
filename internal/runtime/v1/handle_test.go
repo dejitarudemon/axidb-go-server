@@ -1217,7 +1217,7 @@ func TestHandleUnexpectedCommandInBatch(t *testing.T) {
 	ctx := NewContext(context.Background(), "user", 1, true)
 	got := rt.executeRequest(ctx, bodies.Request{Number: 7, Body: bodies.Ping{}}, false, builder.NewBatchResultsBuilder())
 
-	encoded, err := rt.encodeBatchResult(1, got, nil)
+	encoded, err := rt.encodeBatchResult(row.NewRequestRow("user", nil), 1, got)
 	if err != nil {
 		t.Fatalf("encode = %v", err)
 	}
@@ -1262,7 +1262,7 @@ func handleRuntimeN(t *testing.T, goroutines int) *storedRuntime {
 
 	stored := &storedRuntime{data: map[string]values.String{}}
 	cfg := config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20).WithMaxGoroutinesPerBatch(goroutines)
-	stored.Runtime = NewRuntimerBuilder(*cfg).
+	stored.Runtime = NewRuntimeBuilder(*cfg).
 		WithHandlerRead(func(ctx Context, key fields.Key) (value.V, error) {
 			stored.note("read", ctx, key)
 			if stored.readErr != nil {

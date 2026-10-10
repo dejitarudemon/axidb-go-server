@@ -6,7 +6,7 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/value"
 )
 
-// defaultHandlerRead is the stub read handler wired by [NewRuntimerBuilder] so the
+// defaultHandlerRead is the stub read handler wired by [NewRuntimeBuilder] so the
 // runtime never panics on a nil handler. Callers must register a real read
 // handler via [RuntimeBuilder.WithHandlerRead].
 //
@@ -15,7 +15,7 @@ func defaultHandlerRead(ctx Context, key fields.Key) (value.V, error) {
 	return nil, protocolerrs.NewErrorCommandNotImplemented()
 }
 
-// defaultHandlerWrite is the stub write handler wired by [NewRuntimerBuilder] so
+// defaultHandlerWrite is the stub write handler wired by [NewRuntimeBuilder] so
 // the runtime never panics on a nil handler. Callers must register a real write
 // handler via [RuntimeBuilder.WithHandlerWrite].
 //
@@ -24,7 +24,7 @@ func defaultHandlerWrite(ctx Context, key fields.Key, value value.V) error {
 	return protocolerrs.NewErrorCommandNotImplemented()
 }
 
-// defaultHandlerDelete is the stub delete handler wired by [NewRuntimerBuilder]
+// defaultHandlerDelete is the stub delete handler wired by [NewRuntimeBuilder]
 // so the runtime never panics on a nil handler. Callers must register a real
 // delete handler via [RuntimeBuilder.WithHandlerDelete].
 //
@@ -33,7 +33,7 @@ func defaultHandlerDelete(ctx Context, key fields.Key) error {
 	return protocolerrs.NewErrorCommandNotImplemented()
 }
 
-// defaultHandlerAuth is the stub auth handler wired by [NewRuntimerBuilder] so
+// defaultHandlerAuth is the stub auth handler wired by [NewRuntimeBuilder] so
 // the runtime never panics on a nil handler. Callers must register a real auth
 // handler via [RuntimeBuilder.WithHandlerAuth].
 //

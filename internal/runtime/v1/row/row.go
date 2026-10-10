@@ -3,6 +3,7 @@ package row
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
@@ -15,10 +16,12 @@ var ErrNoFreeRequestID = errors.New("no free request ID")
 // compressions negotiated for that connection.
 //
 // Each ID is stored with the isExternal flag passed to [RequestRow.Register]
-// or [RequestRow.Reserve]. The compression set is fixed by [NewRequestRow].
-// Count reports how many IDs are currently registered. Methods are safe for
-// concurrent use. A RequestRow contains a mutex and must not be copied; share
-// the pointer returned by [NewRequestRow].
+// or [RequestRow.Reserve]. At most one server idle-ping id may be active; it
+// carries a deadline and is dropped by [RequestRow.BeginIdlePing] when expired,
+// or by [RequestRow.Terminate] when the client answers. The compression set is
+// fixed by [NewRequestRow]. Count reports how many IDs are currently registered.
+// Methods are safe for concurrent use. A RequestRow contains a mutex and must
+// not be copied; share the pointer returned by [NewRequestRow].
 type RequestRow struct {
 	login        string
 	requests     map[fields.RequestID]bool
@@ -26,6 +29,11 @@ type RequestRow struct {
 
 	// next is the next candidate for [RequestRow.Reserve]. Zero means start at 1.
 	next fields.RequestID
+
+	// idlePingID is the outstanding server idle-ping reservation, or 0.
+	idlePingID fields.RequestID
+	// idlePingDeadline is when idlePingID becomes reusable if still unanswered.
+	idlePingDeadline time.Time
 
 	mx sync.RWMutex
 }
@@ -77,36 +85,52 @@ func (r *RequestRow) Reserve(isExternal bool) (fields.RequestID, error) {
 	r.mx.Lock()
 	defer r.mx.Unlock()
 
-	start := r.next
-	if start == 0 {
-		start = 1
+	return r.reserveLocked(isExternal)
+}
+
+// BeginIdlePing reserves a server idle-ping id that expires at deadline.
+//
+// If a previous idle ping is still before deadline, ok is false and id is 0 —
+// callers must not send another ping. If that previous id is past deadline, it
+// is dropped first. The new id is marked external so a client ping answer is
+// accepted. A non-positive wait until deadline still reserves once; the next
+// BeginIdlePing then treats it as expired.
+func (r *RequestRow) BeginIdlePing(deadline time.Time) (id fields.RequestID, ok bool, err error) {
+	r.mx.Lock()
+	defer r.mx.Unlock()
+
+	now := time.Now()
+	if r.idlePingID != 0 {
+		if now.Before(r.idlePingDeadline) {
+			return 0, false, nil
+		}
+		delete(r.requests, r.idlePingID)
+		r.idlePingID = 0
+		r.idlePingDeadline = time.Time{}
 	}
 
-	id := start
-	for {
-		if _, ok := r.requests[id]; !ok {
-			r.requests[id] = isExternal
-			r.next = id + 1
-			return id, nil
-		}
-
-		id++
-		if id == 0 {
-			id = 1
-		}
-		if id == start {
-			return 0, ErrNoFreeRequestID
-		}
+	id, err = r.reserveLocked(true)
+	if err != nil {
+		return 0, false, err
 	}
+
+	r.idlePingID = id
+	r.idlePingDeadline = deadline
+	return id, true, nil
 }
 
 // Terminate removes requestID from the active set.
-// An ID that is not registered is ignored.
+// An ID that is not registered is ignored. If it is the idle-ping id, the idle
+// slot is cleared so [RequestRow.BeginIdlePing] may reserve again.
 func (r *RequestRow) Terminate(requestID fields.RequestID) {
 	r.mx.Lock()
 	defer r.mx.Unlock()
 
 	delete(r.requests, requestID)
+	if r.idlePingID == requestID {
+		r.idlePingID = 0
+		r.idlePingDeadline = time.Time{}
+	}
 }
 
 // IsRegistered reports the isExternal flag stored for requestID and whether
@@ -131,6 +155,31 @@ func (r *RequestRow) Count() int {
 func (r *RequestRow) isRegistered(requestID fields.RequestID) (bool, bool) {
 	isExternal, ok := r.requests[requestID]
 	return isExternal, ok
+}
+
+// reserveLocked implements Reserve while r.mx is held.
+func (r *RequestRow) reserveLocked(isExternal bool) (fields.RequestID, error) {
+	start := r.next
+	if start == 0 {
+		start = 1
+	}
+
+	id := start
+	for {
+		if _, ok := r.requests[id]; !ok {
+			r.requests[id] = isExternal
+			r.next = id + 1
+			return id, nil
+		}
+
+		id++
+		if id == 0 {
+			id = 1
+		}
+		if id == start {
+			return 0, ErrNoFreeRequestID
+		}
+	}
 }
 
 // Login returns the login passed to [NewRequestRow].

@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -17,7 +19,12 @@ import (
 	"github.com/dejitarudemon/axidb-go-server/internal/table"
 )
 
-const v0Limit = 263
+const (
+	v0Limit = 263
+
+	// minTLSVersion is the lowest TLS protocol version the server accepts.
+	minTLSVersion = tls.VersionTLS13
+)
 
 // Server accepts TCP connections and dispatches protocol frames.
 type Server struct {
@@ -41,15 +48,24 @@ type Server struct {
 	pingInterval time.Duration
 	pingTimeout  time.Duration
 	bufferSize   int
+
+	tlsConfig   *tls.Config
+	tlsCertFile string
+	tlsKeyFile  string
 }
 
 // NewServer returns a server that is not yet listening.
 //
-// cfg supplies timeouts, network, and buffer size; a nil cfg uses
-// [config.NewServerConfig] defaults. A nil logger is allowed.
+// cfg supplies timeouts, network, buffer size, and optional TLS credentials;
+// a nil cfg uses [config.NewServerConfig] defaults. A nil logger is allowed.
 func NewServer(cfg *config.ServerConfig, logger logger.Logger) *Server {
 	if cfg == nil {
 		cfg = config.NewServerConfig()
+	}
+
+	var tlsCfg *tls.Config
+	if cfg.TLSConfig() != nil {
+		tlsCfg = cfg.TLSConfig().Clone()
 	}
 
 	return &Server{
@@ -62,6 +78,9 @@ func NewServer(cfg *config.ServerConfig, logger logger.Logger) *Server {
 		readTimeout:  cfg.ReadTimeout(),
 		pingInterval: cfg.PingInterval(),
 		pingTimeout:  cfg.PingTimeout(),
+		tlsConfig:    tlsCfg,
+		tlsCertFile:  cfg.TLSCertFile(),
+		tlsKeyFile:   cfg.TLSKeyFile(),
 	}
 }
 
@@ -84,6 +103,12 @@ func (s *Server) RegisterV1Runtime(runtime *runtime_v1.Runtime) error {
 
 // Start listens on addr:port and begins accepting connections.
 //
+// When TLS credentials are configured ([config.ServerConfig.WithTLSConfig] or
+// [config.ServerConfig.WithTLSFiles]), the listener is a TLS listener that
+// requires at least TLS 1.3. Otherwise the server listens in plain TCP and
+// emits [unprotectedTLSMessage]: through the logger at warn level when one is
+// set, or to stdout when the logger is nil.
+//
 // Each Start allocates fresh shutdown/done channels so the server can be
 // started again after [Server.Close].
 func (s *Server) Start(addr string, port uint16) error {
@@ -93,7 +118,17 @@ func (s *Server) Start(addr string, port uint16) error {
 
 	addr = joinAddr(addr, port)
 
-	ln, err := net.Listen(s.network, addr)
+	tlsCfg, err := s.buildTLSConfig()
+	if err != nil {
+		return err
+	}
+
+	var ln net.Listener
+	if tlsCfg != nil {
+		ln, err = tls.Listen(s.network, addr, tlsCfg)
+	} else {
+		ln, err = net.Listen(s.network, addr)
+	}
 	if err != nil {
 		return err
 	}
@@ -104,10 +139,45 @@ func (s *Server) Start(addr string, port uint16) error {
 	s.listener = ln
 	s.started.Store(true)
 
-	s.info("server is started", "addr", addr, "network", s.network)
+	if tlsCfg == nil {
+		s.alertUnprotected()
+	}
+
+	s.info("server is started", "addr", addr, "network", s.network, "tls", tlsCfg != nil)
 
 	go s.serve()
 	return nil
+}
+
+// buildTLSConfig returns the TLS config for listening, or nil for plain TCP.
+//
+// A config from [config.ServerConfig.WithTLSConfig] wins. Otherwise PEM files
+// from [config.ServerConfig.WithTLSFiles] are loaded. Missing credentials yield
+// nil without error. In all TLS cases [minTLSVersion] (TLS 1.3) is enforced.
+func (s *Server) buildTLSConfig() (*tls.Config, error) {
+	if s.tlsConfig != nil {
+		return enforceMinTLSVersion(s.tlsConfig.Clone()), nil
+	}
+	if s.tlsCertFile == "" || s.tlsKeyFile == "" {
+		return nil, nil
+	}
+
+	cert, err := tls.LoadX509KeyPair(s.tlsCertFile, s.tlsKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("load TLS credentials: %w", err)
+	}
+
+	return enforceMinTLSVersion(&tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}), nil
+}
+
+// enforceMinTLSVersion raises cfg.MinVersion to at least [minTLSVersion].
+func enforceMinTLSVersion(cfg *tls.Config) *tls.Config {
+	if cfg.MinVersion < minTLSVersion {
+		cfg.MinVersion = minTLSVersion
+	}
+	return cfg
 }
 
 // Close stops accepting, cancels active connections, and waits for the accept

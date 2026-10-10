@@ -14,7 +14,7 @@ import (
 )
 
 func TestActivateAcceptsTheClient(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
 		WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
 			return true, nil
 		}).
@@ -44,7 +44,7 @@ func TestActivateAcceptsTheClient(t *testing.T) {
 }
 
 func TestActivateRejectsUnauthorized(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
 		WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
 			return false, nil
 		}).
@@ -65,7 +65,7 @@ func TestActivateRejectsUnauthorized(t *testing.T) {
 }
 
 func TestActivateAuthErrorBecomesAnAnswer(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
 		WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
 			return false, errors.New("db")
 		}).
@@ -86,7 +86,7 @@ func TestActivateAuthErrorBecomesAnAnswer(t *testing.T) {
 }
 
 func TestActivateUnexpectedCommand(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 
 	requestRow, _, answer, err := rt.Activate(context.Background(), frame.Frame{
 		RequestID: 1,
@@ -107,7 +107,7 @@ func TestActivateUnexpectedCommand(t *testing.T) {
 
 func TestActivateSkipAuthDoesNotCallTheHandler(t *testing.T) {
 	called := false
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
 		WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
 			called = true
 			return false, errors.New("db")
@@ -143,7 +143,7 @@ func TestActivateSkipAuthDoesNotCallTheHandler(t *testing.T) {
 
 func TestActivateSkipAuthStillRequiresHandshake(t *testing.T) {
 	called := false
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).
 		WithHandlerAuth(func(Context, string, [32]byte) (bool, error) {
 			called = true
 			return true, nil
@@ -172,7 +172,7 @@ func TestActivateSkipAuthStillRequiresHandshake(t *testing.T) {
 }
 
 func TestActivateInvalidHandshakeIsAnAnswer(t *testing.T) {
-	rt := NewRuntimerBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
+	rt := NewRuntimeBuilder(*config.NewRuntimeBuilderConfig().WithBodyLimit(1 << 20)).Build()
 
 	requestRow, _, answer, err := rt.Activate(context.Background(), frame.Frame{
 		RequestID: 1,

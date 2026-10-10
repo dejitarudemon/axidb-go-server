@@ -27,8 +27,6 @@ go.work.sum
 # env file
 .env
 
-# Local playground (dumb server / client / sandbox)
-/test/
 
 # Editor/IDE
 # .idea/

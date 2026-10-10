@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/dejitarudemon/axidb-go-protocol/v1/err/errs"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
@@ -424,5 +425,48 @@ func assertRequestsConflict(t *testing.T, err error, id fields.RequestID) {
 	suffix := fmt.Sprintf(": %d,", id)
 	if !strings.HasSuffix(err.Error(), suffix) {
 		t.Fatalf("error = %q, want suffix %q", err.Error(), suffix)
+	}
+}
+
+func TestBeginIdlePingBlocksUntilExpiryOrTerminate(t *testing.T) {
+	r := NewRequestRow("user", nil)
+
+	id, ok, err := r.BeginIdlePing(time.Now().Add(time.Hour))
+	if err != nil || !ok || id == 0 {
+		t.Fatalf("BeginIdlePing() = (%d, %v, %v)", id, ok, err)
+	}
+
+	_, ok, err = r.BeginIdlePing(time.Now().Add(time.Hour))
+	if err != nil || ok {
+		t.Fatalf("second BeginIdlePing() = ok=%v err=%v, want blocked", ok, err)
+	}
+	if r.Count() != 1 {
+		t.Fatalf("Count() = %d, want 1", r.Count())
+	}
+
+	r.Terminate(id)
+	id2, ok, err := r.BeginIdlePing(time.Now().Add(time.Hour))
+	if err != nil || !ok || id2 == 0 {
+		t.Fatalf("BeginIdlePing after Terminate() = (%d, %v, %v)", id2, ok, err)
+	}
+}
+
+func TestBeginIdlePingExpires(t *testing.T) {
+	r := NewRequestRow("user", nil)
+
+	id, ok, err := r.BeginIdlePing(time.Now().Add(-time.Millisecond))
+	if err != nil || !ok || id == 0 {
+		t.Fatalf("BeginIdlePing() = (%d, %v, %v)", id, ok, err)
+	}
+
+	id2, ok, err := r.BeginIdlePing(time.Now().Add(time.Hour))
+	if err != nil || !ok || id2 == 0 {
+		t.Fatalf("BeginIdlePing after expiry() = (%d, %v, %v)", id2, ok, err)
+	}
+	if _, registered := r.IsRegistered(id); registered && id != id2 {
+		t.Fatalf("expired id %d still registered", id)
+	}
+	if r.Count() != 1 {
+		t.Fatalf("Count() = %d, want 1", r.Count())
 	}
 }

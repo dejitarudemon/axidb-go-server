@@ -46,7 +46,27 @@ jobs:
 
       - name: Test
         if: steps.go.outputs.packages == 'true'
-        run: go test -race ./...
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Get coverage percentage
+        if: steps.go.outputs.packages == 'true'
+        id: coverage
+        run: |
+          pct=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
+          echo "pct=$pct" >> "$GITHUB_OUTPUT"
+
+      - name: Update coverage badge
+        if: steps.go.outputs.packages == 'true' && github.ref == 'refs/heads/main'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: b71fd6149421abe8196d4e6b1e88a93f
+          filename: coverage.json
+          label: coverage
+          message: ${{ steps.coverage.outputs.pct }}%
+          valColorRange: ${{ steps.coverage.outputs.pct }}
+          minColorRange: 50
+          maxColorRange: 90
 
       - name: Lint
         if: steps.go.outputs.packages == 'true'

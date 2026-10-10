@@ -100,7 +100,7 @@ func (r Runtime) Handle(ctx context.Context, request frame.Frame, requestRow *ro
 			defer requestRow.Terminate(request.RequestID)
 
 			r.debugWithCtx(reqCtx, "handling request", "command", request.Body.Command())
-			r.handleRequest(reqCtx, request.Body, yield)
+			r.handleRequest(reqCtx, requestRow, request.Body, yield)
 			return
 		}
 

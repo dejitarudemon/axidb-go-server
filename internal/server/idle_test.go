@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/dejitarudemon/axidb-go-protocol/v1/body/bodies"
-	v1decoder "github.com/dejitarudemon/axidb-go-protocol/v1/decoder"
 	v1fields "github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 )
 
@@ -115,7 +114,7 @@ func TestIdlePingDoesNotFlood(t *testing.T) {
 		if err := conn.SetReadDeadline(time.Now().Add(remaining)); err != nil {
 			t.Fatalf("SetReadDeadline() = %v", err)
 		}
-		got, err := v1decoder.NewDecoder(v1TestLimit, nil).DecodeFrame(conn.r)
+		got, err := testV1Decoder.DecodeFrame(conn.r)
 		if err != nil {
 			if isTimeout(err) {
 				break
@@ -179,5 +178,54 @@ func TestIdlePingThenAnswerThenAnotherPing(t *testing.T) {
 	}
 	if ping2.RequestID == 0 {
 		t.Fatal("second ping id = 0")
+	}
+}
+
+// TestIdlePingIDExpiresWithoutAnswer ensures activity without PingAnswer does
+// not accumulate idle-ping ids: the runtime keeps one reservation until ttl,
+// then may send another.
+func TestIdlePingIDExpiresWithoutAnswer(t *testing.T) {
+	cfg := testConfig(t).
+		WithReadTimeout(20 * time.Millisecond).
+		WithPingInterval(30 * time.Millisecond).
+		WithPingTimeout(80 * time.Millisecond)
+
+	s := startTestServer(t, cfg, testRuntime(t))
+	conn := dialServer(t, s)
+	registerAndActivate(t, conn)
+
+	ping := readV1Frame(t, conn, time.Second)
+	if _, ok := ping.Body.(bodies.Ping); !ok {
+		t.Fatalf("body = %T, want server Ping", ping.Body)
+	}
+
+	// Activity clears connection ping-wait but leaves the runtime reservation.
+	writeAll(t, conn, encodeClientPing(t, 1001))
+	ans := readV1IgnoringServerPings(t, conn, time.Second)
+	if _, ok := ans.Body.(bodies.PingAnswer); !ok {
+		t.Fatalf("body = %T, want PingAnswer", ans.Body)
+	}
+
+	// Within ttl the server must not emit another idle ping.
+	if err := conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond)); err != nil {
+		t.Fatalf("SetReadDeadline() = %v", err)
+	}
+	if _, err := testV1Decoder.DecodeFrame(conn.r); err == nil {
+		t.Fatal("unexpected frame before idle-ping ttl expiry")
+	} else if !isTimeout(err) {
+		t.Fatalf("DecodeFrame() = %v, want timeout", err)
+	}
+
+	if got := s.table.Stats().RequestsActive; got > 1 {
+		t.Fatalf("RequestsActive = %d within ttl, want <= 1", got)
+	}
+
+	// After ttl a new idle ping may appear; still only one reserved id.
+	ping2 := readV1Frame(t, conn, time.Second)
+	if _, ok := ping2.Body.(bodies.Ping); !ok {
+		t.Fatalf("body = %T, want server Ping after ttl", ping2.Body)
+	}
+	if got := s.table.Stats().RequestsActive; got > 1 {
+		t.Fatalf("RequestsActive = %d after renew, want <= 1", got)
 	}
 }

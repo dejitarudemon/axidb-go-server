@@ -11,6 +11,7 @@ import (
 	"github.com/dejitarudemon/axidb-go-protocol/v1/fields"
 	"github.com/dejitarudemon/axidb-go-protocol/v1/frame"
 	"github.com/dejitarudemon/axidb-go-server/internal/runtime/errs"
+	"github.com/dejitarudemon/axidb-go-server/internal/runtime/v1/row"
 )
 
 // decodeClosesConnection reports a failure that leaves the stream unusable.
@@ -85,15 +86,15 @@ func (r Runtime) encodeFrame(frame frame.Frame, compressor compressor.Compressor
 }
 
 // encodeBatchResult builds a batch answer for requestID from rBuilder and
-// encodes it with compressor. A build or encode failure is returned as that error.
-func (r Runtime) encodeBatchResult(requestID fields.RequestID, rBuilder *builder.BatchResultsBuilder, compressor compressor.Compressor) ([]byte, error) {
+// encodes it with [Runtime.selectCompression]. A build or encode failure is
+// returned as that error.
+func (r Runtime) encodeBatchResult(row *row.RequestRow, requestID fields.RequestID, rBuilder *builder.BatchResultsBuilder) ([]byte, error) {
 	frame, err := builder.NewFrameBuilder(r.limit).NewBatchAnswer(requestID, *rBuilder)
 	if err != nil {
 		return nil, err
-
 	}
 
-	return r.encodeFrame(frame, compressor)
+	return r.encodeFrame(frame, r.selectCompression(row, frame.Body))
 }
 
 // handleInterruptionInBatch records err as the result of nested command number.
